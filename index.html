@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>競馬の買い目メモ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>競馬の買い目メモ</h1>
+      <p>購入予定・購入済みの買い目をローカルに記録できます。</p>
+    </div>
+  </header>
+
+  <main class="app-layout">
+    <section class="form-section" aria-labelledby="form-title">
+      <h2 id="form-title">買い目を登録</h2>
+
+      <form id="bet-form">
+        <div class="form-grid">
+          <label>
+            日付
+            <input type="date" id="date" required>
+          </label>
+
+          <label>
+            競馬場
+            <input type="text" id="place" placeholder="例：東京、京都、大井" required>
+          </label>
+
+          <label>
+            レース番号・レース名
+            <input type="text" id="race" placeholder="例：東京11R、天皇賞・春" required>
+          </label>
+
+          <label>
+            券種
+            <select id="ticket-type" required>
+              <option value="">選択してください</option>
+              <option value="単勝">単勝</option>
+              <option value="複勝">複勝</option>
+              <option value="ワイド">ワイド</option>
+              <option value="馬連">馬連</option>
+              <option value="馬単">馬単</option>
+              <option value="三連複">三連複</option>
+              <option value="三連単">三連単</option>
+            </select>
+          </label>
+
+          <label>
+            買い目
+            <input type="text" id="bet-numbers" placeholder="例：7、7-13、7→13" required>
+          </label>
+
+          <label>
+            金額
+            <input type="number" id="amount" min="100" step="100" placeholder="例：1000" required>
+          </label>
+        </div>
+
+        <label>
+          メモ
+          <textarea id="memo" rows="3" placeholder="例：本命寄り、穴狙い、保険"></textarea>
+        </label>
+
+        <button type="submit" class="primary-button">登録する</button>
+      </form>
+    </section>
+
+    <section class="list-section" aria-labelledby="list-title">
+      <div class="list-header">
+        <div>
+          <h2 id="list-title">登録した買い目</h2>
+          <p id="bet-count">0件</p>
+        </div>
+        <p class="total-amount">合計：<span id="total-amount">0</span>円</p>
+      </div>
+
+      <div id="empty-message" class="empty-message">
+        まだ買い目が登録されていません。
+      </div>
+
+      <div id="bet-list" class="bet-list"></div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
