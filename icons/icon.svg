@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="買い目メモ">
+  <rect width="512" height="512" rx="96" fill="#1f6f4a"/>
+  <circle cx="142" cy="142" r="42" fill="#ffffff"/>
+  <path d="M250 128h118c18 0 32 14 32 32s-14 32-32 32H250c-18 0-32-14-32-32s14-32 32-32Z" fill="#ffffff"/>
+  <path d="M112 246h288c18 0 32 14 32 32v110c0 18-14 32-32 32H112c-18 0-32-14-32-32V278c0-18 14-32 32-32Z" fill="#ffffff"/>
+  <path d="M136 300h104M136 354h170" stroke="#1f6f4a" stroke-width="28" stroke-linecap="round"/>
+  <path d="M330 296l42 42 62-74" fill="none" stroke="#d84a3a" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

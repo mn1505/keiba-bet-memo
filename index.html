@@ -3,13 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>競馬の買い目メモ</title>
+  <meta name="theme-color" content="#1f6f4a">
+  <meta name="description" content="競馬の買い目をスマホに保存できるメモアプリです。">
+  <title>買い目メモ</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="app-header">
     <div>
-      <h1>競馬の買い目メモ</h1>
+      <h1>買い目メモ</h1>
       <p>購入予定・購入済みの買い目をローカルに記録できます。</p>
     </div>
   </header>
@@ -87,5 +92,12 @@
   </main>
 
   <script src="script.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("service-worker.js");
+      });
+    }
+  </script>
 </body>
 </html>

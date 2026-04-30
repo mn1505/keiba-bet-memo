@@ -1,0 +1,19 @@
+{
+  "name": "買い目メモ",
+  "short_name": "買い目メモ",
+  "description": "競馬の買い目をスマホに保存できるメモアプリです。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7f2",
+  "theme_color": "#1f6f4a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
