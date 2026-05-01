@@ -270,6 +270,104 @@
         <div id="ticket-summary-list" class="ticket-summary-list"></div>
       </section>
 
+      <section class="analysis-section" aria-labelledby="analysis-title">
+        <div class="analysis-header">
+          <div>
+            <h2 id="analysis-title">分析ダッシュボード</h2>
+            <p>分析は現在の絞り込み条件を反映します。現在残高は上部の架空資金シミュレーションで全記録基準のまま確認できます。</p>
+          </div>
+        </div>
+
+        <div id="analysis-basic-cards" class="analysis-basic-cards" aria-label="基本分析"></div>
+
+        <div class="analysis-grid">
+          <section class="analysis-panel" aria-labelledby="analysis-date-title">
+            <h3 id="analysis-date-title">日付別成績</h3>
+            <div class="table-scroll">
+              <table class="analysis-table">
+                <thead>
+                  <tr>
+                    <th>日付</th>
+                    <th>件数</th>
+                    <th>購入金額</th>
+                    <th>払戻金</th>
+                    <th>収支</th>
+                    <th>回収率</th>
+                    <th>的中率</th>
+                  </tr>
+                </thead>
+                <tbody id="analysis-date-table"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="analysis-panel" aria-labelledby="analysis-place-title">
+            <h3 id="analysis-place-title">競馬場別成績</h3>
+            <div class="table-scroll">
+              <table class="analysis-table">
+                <thead>
+                  <tr>
+                    <th>競馬場</th>
+                    <th>件数</th>
+                    <th>購入金額</th>
+                    <th>払戻金</th>
+                    <th>収支</th>
+                    <th>回収率</th>
+                    <th>的中率</th>
+                  </tr>
+                </thead>
+                <tbody id="analysis-place-table"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="analysis-panel" aria-labelledby="analysis-tag-title">
+            <h3 id="analysis-tag-title">タグ別成績</h3>
+            <div class="table-scroll">
+              <table class="analysis-table">
+                <thead>
+                  <tr>
+                    <th>タグ</th>
+                    <th>件数</th>
+                    <th>購入金額</th>
+                    <th>払戻金</th>
+                    <th>収支</th>
+                    <th>回収率</th>
+                    <th>的中率</th>
+                  </tr>
+                </thead>
+                <tbody id="analysis-tag-table"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="analysis-grid">
+          <section class="analysis-panel" aria-labelledby="analysis-ranking-title">
+            <h3 id="analysis-ranking-title">回収率ランキング</h3>
+            <div class="ranking-grid">
+              <div>
+                <h4>券種</h4>
+                <ol id="analysis-ticket-ranking" class="ranking-list"></ol>
+              </div>
+              <div>
+                <h4>競馬場</h4>
+                <ol id="analysis-place-ranking" class="ranking-list"></ol>
+              </div>
+              <div>
+                <h4>タグ</h4>
+                <ol id="analysis-tag-ranking" class="ranking-list"></ol>
+              </div>
+            </div>
+          </section>
+
+          <section class="analysis-panel" aria-labelledby="analysis-record-title">
+            <h3 id="analysis-record-title">最大払戻・最大損益の記録</h3>
+            <div id="analysis-record-highlights" class="record-highlight-list"></div>
+          </section>
+        </div>
+      </section>
+
       <div id="empty-message" class="empty-message">
         まだ購入記録が登録されていません。
       </div>

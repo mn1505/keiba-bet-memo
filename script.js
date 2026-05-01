@@ -1,7 +1,7 @@
 const STORAGE_KEY = "keibaBetMemoList";
 const SIMULATION_STORAGE_KEY = "keibaBetMemoSimulationSettings";
 const APP_NAME = "keiba-bet-memo";
-const APP_VERSION = "v8";
+const APP_VERSION = "v9";
 const DEFAULT_INITIAL_FUND = 100000;
 const RACE_OPTIONS = ["1R", "2R", "3R", "4R", "5R", "6R", "7R", "8R", "9R", "10R", "11R", "12R"];
 const TICKET_TYPES = ["単勝", "複勝", "ワイド", "馬連", "馬単", "三連複", "三連単"];
@@ -54,6 +54,14 @@ const profitLoss = document.getElementById("profit-loss");
 const recoveryRate = document.getElementById("recovery-rate");
 const betCount = document.getElementById("bet-count");
 const ticketSummaryList = document.getElementById("ticket-summary-list");
+const analysisBasicCards = document.getElementById("analysis-basic-cards");
+const analysisDateTable = document.getElementById("analysis-date-table");
+const analysisPlaceTable = document.getElementById("analysis-place-table");
+const analysisTagTable = document.getElementById("analysis-tag-table");
+const analysisTicketRanking = document.getElementById("analysis-ticket-ranking");
+const analysisPlaceRanking = document.getElementById("analysis-place-ranking");
+const analysisTagRanking = document.getElementById("analysis-tag-ranking");
+const analysisRecordHighlights = document.getElementById("analysis-record-highlights");
 const filterDateInput = document.getElementById("filter-date");
 const filterPlaceInput = document.getElementById("filter-place");
 const filterTicketTypeInput = document.getElementById("filter-ticket-type");
@@ -1256,6 +1264,7 @@ function updateSummary(targetBets) {
   recoveryRate.textContent = recoveryRateValue.toFixed(1);
   betCount.textContent = "表示中：" + targetBets.length + "件 / 全" + bets.length + "件";
   updateTicketTypeSummary(targetBets);
+  updateAnalysisDashboard(targetBets);
 }
 
 function updateTicketTypeSummary(targetBets) {
@@ -1337,6 +1346,286 @@ function createTicketSummaryCard(summary) {
   return card;
 }
 
+function updateAnalysisDashboard(targetBets) {
+  // 分析は保存せず、一覧と同じ絞り込み済みデータから毎回作り直します。
+  const summary = calculateAnalysisSummary(targetBets);
+
+  renderAnalysisBasicCards(summary);
+  renderAnalysisTable(analysisDateTable, createDateAnalysisRows(targetBets), "日付");
+  renderAnalysisTable(analysisPlaceTable, createSingleKeyAnalysisRows(targetBets, "place", "未入力"), "競馬場");
+  renderAnalysisTable(analysisTagTable, createTagAnalysisRows(targetBets), "タグ");
+  renderRankingList(analysisTicketRanking, createSingleKeyAnalysisRows(targetBets, "ticketType", "未入力"));
+  renderRankingList(analysisPlaceRanking, createSingleKeyAnalysisRows(targetBets, "place", "未入力"));
+  renderRankingList(analysisTagRanking, createTagAnalysisRows(targetBets));
+  renderRecordHighlights(targetBets);
+}
+
+function calculateAnalysisSummary(targetBets) {
+  const stats = createEmptyAnalysisStats("全体");
+
+  targetBets.forEach(function (bet) {
+    addBetToAnalysisStats(stats, bet);
+  });
+
+  finishAnalysisStats(stats);
+
+  const profits = targetBets.map(function (bet) {
+    return getBetProfit(bet);
+  });
+  const payouts = targetBets.map(function (bet) {
+    return Number(bet.payout) || 0;
+  });
+
+  stats.averageAmount = stats.count === 0 ? 0 : stats.amountSum / stats.count;
+  stats.averagePayout = stats.count === 0 ? 0 : stats.payoutSum / stats.count;
+  stats.maxPayout = payouts.length === 0 ? 0 : Math.max.apply(null, payouts);
+  stats.maxPlusProfit = profits.length === 0 ? 0 : Math.max.apply(null, profits);
+  stats.maxMinusProfit = profits.length === 0 ? 0 : Math.min.apply(null, profits);
+
+  return stats;
+}
+
+function renderAnalysisBasicCards(summary) {
+  const cards = [
+    { label: "表示中の購入記録件数", value: summary.count + "件" },
+    { label: "的中件数", value: summary.hitCount + "件" },
+    { label: "不的中件数", value: summary.missCount + "件" },
+    { label: "未確定件数", value: summary.pendingCount + "件" },
+    { label: "的中率", value: formatPercent(summary.hitRate) },
+    { label: "合計購入金額", value: formatYen(summary.amountSum) + "円" },
+    { label: "合計払戻金", value: formatYen(summary.payoutSum) + "円" },
+    { label: "収支", value: formatSignedYen(summary.profitLoss) + "円", className: summary.profitLoss >= 0 ? "plus" : "minus" },
+    { label: "回収率", value: formatPercent(summary.recoveryRate) },
+    { label: "平均購入金額", value: formatYen(Math.round(summary.averageAmount)) + "円" },
+    { label: "平均払戻金", value: formatYen(Math.round(summary.averagePayout)) + "円" },
+    { label: "最大払戻金", value: formatYen(summary.maxPayout) + "円" },
+    { label: "最大プラス収支", value: formatSignedYen(summary.maxPlusProfit) + "円", className: summary.maxPlusProfit >= 0 ? "plus" : "minus" },
+    { label: "最大マイナス収支", value: formatSignedYen(summary.maxMinusProfit) + "円", className: summary.maxMinusProfit >= 0 ? "plus" : "minus" }
+  ];
+
+  analysisBasicCards.innerHTML = cards.map(function (card) {
+    const className = card.className ? ' class="' + card.className + '"' : "";
+
+    return `
+      <div class="analysis-card">
+        <span>${escapeHtml(card.label)}</span>
+        <strong${className}>${escapeHtml(card.value)}</strong>
+      </div>
+    `;
+  }).join("");
+}
+
+function createDateAnalysisRows(targetBets) {
+  return createSingleKeyAnalysisRows(targetBets, "date", "未入力").sort(function (a, b) {
+    return a.name.localeCompare(b.name, "ja");
+  });
+}
+
+function createSingleKeyAnalysisRows(targetBets, key, emptyLabel) {
+  const summaries = {};
+
+  targetBets.forEach(function (bet) {
+    const name = String(bet[key] || "").trim() || emptyLabel;
+
+    if (summaries[name] === undefined) {
+      summaries[name] = createEmptyAnalysisStats(name);
+    }
+
+    addBetToAnalysisStats(summaries[name], bet);
+  });
+
+  return Object.keys(summaries).map(function (name) {
+    finishAnalysisStats(summaries[name]);
+    return summaries[name];
+  }).sort(function (a, b) {
+    return a.name.localeCompare(b.name, "ja");
+  });
+}
+
+function createTagAnalysisRows(targetBets) {
+  const summaries = {};
+
+  targetBets.forEach(function (bet) {
+    const tags = Array.isArray(bet.tags) && bet.tags.length > 0 ? bet.tags : ["タグなし"];
+
+    tags.forEach(function (tag) {
+      const name = String(tag || "").trim() || "タグなし";
+
+      if (summaries[name] === undefined) {
+        summaries[name] = createEmptyAnalysisStats(name);
+      }
+
+      addBetToAnalysisStats(summaries[name], bet);
+    });
+  });
+
+  return Object.keys(summaries).map(function (name) {
+    finishAnalysisStats(summaries[name]);
+    return summaries[name];
+  }).sort(function (a, b) {
+    return a.name.localeCompare(b.name, "ja");
+  });
+}
+
+function createEmptyAnalysisStats(name) {
+  return {
+    name: name,
+    count: 0,
+    hitCount: 0,
+    missCount: 0,
+    pendingCount: 0,
+    amountSum: 0,
+    payoutSum: 0,
+    profitLoss: 0,
+    recoveryRate: 0,
+    hitRate: 0
+  };
+}
+
+function addBetToAnalysisStats(stats, bet) {
+  const status = normalizeStatus(bet.status);
+
+  stats.count += 1;
+  stats.amountSum += Number(bet.amount) || 0;
+  stats.payoutSum += Number(bet.payout) || 0;
+
+  if (status === "的中") {
+    stats.hitCount += 1;
+  } else if (status === "不的中") {
+    stats.missCount += 1;
+  } else {
+    stats.pendingCount += 1;
+  }
+}
+
+function finishAnalysisStats(stats) {
+  const settledCount = stats.hitCount + stats.missCount;
+
+  stats.profitLoss = stats.payoutSum - stats.amountSum;
+  stats.recoveryRate = stats.amountSum === 0 ? 0 : (stats.payoutSum / stats.amountSum) * 100;
+  // 未確定は的中率の分母に含めません。
+  stats.hitRate = settledCount === 0 ? 0 : (stats.hitCount / settledCount) * 100;
+}
+
+function renderAnalysisTable(tableBody, rows, firstHeaderLabel) {
+  if (rows.length === 0) {
+    tableBody.innerHTML = '<tr><td colspan="7" class="empty-table-cell">表示できる分析データがありません。</td></tr>';
+    return;
+  }
+
+  tableBody.innerHTML = rows.map(function (row) {
+    const profitClass = row.profitLoss >= 0 ? "plus" : "minus";
+
+    return `
+      <tr>
+        <th scope="row">${escapeHtml(row.name || firstHeaderLabel)}</th>
+        <td>${row.count}件</td>
+        <td>${formatYen(row.amountSum)}円</td>
+        <td>${formatYen(row.payoutSum)}円</td>
+        <td class="${profitClass}">${formatSignedYen(row.profitLoss)}円</td>
+        <td>${formatPercent(row.recoveryRate)}</td>
+        <td>${formatPercent(row.hitRate)}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderRankingList(listElement, rows) {
+  const rankingRows = rows
+    .filter(function (row) {
+      return row.amountSum > 0;
+    })
+    .sort(function (a, b) {
+      if (b.recoveryRate !== a.recoveryRate) {
+        return b.recoveryRate - a.recoveryRate;
+      }
+
+      return b.amountSum - a.amountSum;
+    })
+    .slice(0, 5);
+
+  if (rankingRows.length === 0) {
+    listElement.innerHTML = '<li class="ranking-empty">対象データなし</li>';
+    return;
+  }
+
+  listElement.innerHTML = rankingRows.map(function (row) {
+    const sampleLabel = row.count === 1 ? '<span class="sample-badge">サンプル少</span>' : "";
+
+    return `
+      <li>
+        <span class="ranking-name">${escapeHtml(row.name)}</span>
+        <strong>${formatPercent(row.recoveryRate)}</strong>
+        <span>${row.count}件 / 購入 ${formatYen(row.amountSum)}円</span>
+        ${sampleLabel}
+      </li>
+    `;
+  }).join("");
+}
+
+function renderRecordHighlights(targetBets) {
+  if (targetBets.length === 0) {
+    analysisRecordHighlights.innerHTML = '<p class="empty-record-message">表示できる購入記録がありません。</p>';
+    return;
+  }
+
+  const maxPayoutBet = findMaxBet(targetBets, function (bet) {
+    return Number(bet.payout) || 0;
+  });
+  const maxPlusBet = findMaxBet(targetBets, getBetProfit);
+  const maxMinusBet = findMinBet(targetBets, getBetProfit);
+  const highlights = [
+    { title: "最大払戻", bet: maxPayoutBet },
+    { title: "最大プラス収支", bet: maxPlusBet },
+    { title: "最大マイナス収支", bet: maxMinusBet }
+  ];
+
+  analysisRecordHighlights.innerHTML = highlights.map(function (highlight) {
+    return createRecordHighlightHtml(highlight.title, highlight.bet);
+  }).join("");
+}
+
+function createRecordHighlightHtml(title, bet) {
+  const amount = Number(bet.amount) || 0;
+  const payout = Number(bet.payout) || 0;
+  const profit = payout - amount;
+  const profitClass = profit >= 0 ? "plus" : "minus";
+  const tagsText = Array.isArray(bet.tags) && bet.tags.length > 0 ? bet.tags.join(", ") : "タグなし";
+
+  return `
+    <article class="record-highlight">
+      <h4>${escapeHtml(title)}</h4>
+      <dl>
+        <div><dt>日付</dt><dd>${escapeHtml(bet.date || "未入力")}</dd></div>
+        <div><dt>競馬場</dt><dd>${escapeHtml(bet.place || "未入力")}</dd></div>
+        <div><dt>レース番号</dt><dd>${escapeHtml(bet.race || "未入力")}</dd></div>
+        <div><dt>券種</dt><dd>${escapeHtml(bet.ticketType || "未入力")}</dd></div>
+        <div><dt>買い目</dt><dd>${escapeHtml(bet.betNumbers || "未入力")}</dd></div>
+        <div><dt>購入金額</dt><dd>${formatYen(amount)}円</dd></div>
+        <div><dt>払戻金</dt><dd>${formatYen(payout)}円</dd></div>
+        <div><dt>収支</dt><dd class="${profitClass}">${formatSignedYen(profit)}円</dd></div>
+        <div class="record-tags"><dt>タグ</dt><dd>${escapeHtml(tagsText)}</dd></div>
+      </dl>
+    </article>
+  `;
+}
+
+function findMaxBet(targetBets, getValue) {
+  return targetBets.reduce(function (bestBet, bet) {
+    return getValue(bet) > getValue(bestBet) ? bet : bestBet;
+  }, targetBets[0]);
+}
+
+function findMinBet(targetBets, getValue) {
+  return targetBets.reduce(function (bestBet, bet) {
+    return getValue(bet) < getValue(bestBet) ? bet : bestBet;
+  }, targetBets[0]);
+}
+
+function getBetProfit(bet) {
+  return (Number(bet.payout) || 0) - (Number(bet.amount) || 0);
+}
+
 function resetForm() {
   betForm.reset();
   setToday();
@@ -1388,6 +1677,10 @@ function formatSignedYen(number) {
   }
 
   return formatYen(number);
+}
+
+function formatPercent(number) {
+  return Number(number || 0).toFixed(1) + "%";
 }
 
 function createTagsHtml(tags) {

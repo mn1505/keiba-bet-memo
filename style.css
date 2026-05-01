@@ -483,6 +483,235 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.analysis-section {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid #d6dde8;
+  border-radius: 4px;
+  background: #f8fafc;
+}
+
+.analysis-header {
+  margin-bottom: 12px;
+}
+
+.analysis-header h2 {
+  margin-bottom: 4px;
+}
+
+.analysis-header p {
+  margin: 0;
+  color: #4b5565;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.analysis-basic-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.analysis-card {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #d6dde8;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.analysis-card span {
+  display: block;
+  color: #657285;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.analysis-card strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.analysis-panel {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #d6dde8;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.analysis-panel h3 {
+  margin: 0 0 10px;
+  font-size: 17px;
+}
+
+.analysis-panel h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #d6dde8;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.analysis-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.analysis-table th,
+.analysis-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #d6dde8;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.analysis-table th {
+  color: #31445d;
+  background: #edf1f6;
+  font-weight: 700;
+}
+
+.analysis-table th:first-child,
+.analysis-table td:first-child {
+  text-align: left;
+}
+
+.analysis-table tbody tr:last-child th,
+.analysis-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.empty-table-cell {
+  color: #657285;
+  text-align: left;
+}
+
+.ranking-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ranking-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.ranking-list li {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #d6dde8;
+  border-radius: 4px;
+  background: #f8fafc;
+}
+
+.ranking-list strong,
+.ranking-list span {
+  display: block;
+}
+
+.ranking-name {
+  color: #202938;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.sample-badge {
+  width: fit-content;
+  margin-top: 4px;
+  padding: 2px 6px;
+  border: 1px solid #c5cedb;
+  border-radius: 4px;
+  color: #4b5565;
+  background: #edf1f6;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ranking-empty {
+  color: #657285;
+}
+
+.record-highlight-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.record-highlight {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #d6dde8;
+  border-radius: 4px;
+  background: #f8fafc;
+}
+
+.record-highlight h4 {
+  margin-bottom: 8px;
+  color: #172033;
+}
+
+.record-highlight dl {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.record-highlight div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.record-highlight dt {
+  flex: 0 0 auto;
+  color: #657285;
+  font-size: 13px;
+}
+
+.record-highlight dd {
+  min-width: 0;
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.record-highlight .record-tags {
+  display: grid;
+  gap: 0;
+}
+
+.record-highlight .record-tags dd {
+  text-align: left;
+}
+
+.empty-record-message {
+  margin: 0;
+  color: #657285;
+}
+
 .plus {
   color: #11633f;
 }
@@ -770,6 +999,32 @@ textarea {
     text-align: left;
   }
 
+  .analysis-section {
+    padding: 12px;
+  }
+
+  .analysis-basic-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .analysis-card strong {
+    font-size: 16px;
+  }
+
+  .ranking-grid,
+  .record-highlight-list {
+    grid-template-columns: 1fr;
+  }
+
+  .record-highlight div {
+    display: grid;
+    gap: 0;
+  }
+
+  .record-highlight dd {
+    text-align: left;
+  }
+
   .bet-card-header {
     display: grid;
   }
@@ -807,6 +1062,10 @@ textarea {
   }
 
   .filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-basic-cards {
     grid-template-columns: 1fr;
   }
 }
