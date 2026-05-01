@@ -92,6 +92,7 @@ textarea {
 }
 
 .primary-button,
+.secondary-button,
 .delete-button {
   border: 0;
   border-radius: 6px;
@@ -109,6 +110,18 @@ textarea {
 
 .primary-button:hover {
   background: #185a3c;
+}
+
+.secondary-button {
+  min-height: 44px;
+  padding: 10px 14px;
+  color: #1f4e38;
+  background: #e8f1ea;
+  border: 1px solid #b9c8b4;
+}
+
+.secondary-button:hover {
+  background: #dbe9df;
 }
 
 .list-header {
@@ -146,6 +159,37 @@ textarea {
 
 .summary-box span {
   white-space: nowrap;
+}
+
+.filter-section {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid #d8e0d5;
+  border-radius: 8px;
+  background: #fafcf9;
+}
+
+.filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.filter-header h2 {
+  margin: 0;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.filter-grid input,
+.filter-grid select {
+  min-height: 48px;
 }
 
 .ticket-summary-section {
@@ -352,6 +396,23 @@ textarea {
   }
 
   .summary-box {
+    width: 100%;
+  }
+
+  .filter-section {
+    padding: 12px;
+  }
+
+  .filter-header {
+    display: grid;
+  }
+
+  .filter-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .secondary-button {
     width: 100%;
   }
 

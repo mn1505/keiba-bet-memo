@@ -88,6 +88,51 @@
         </div>
       </div>
 
+      <section class="filter-section" aria-labelledby="filter-title">
+        <div class="filter-header">
+          <h2 id="filter-title">絞り込み</h2>
+          <button type="button" id="reset-filters" class="secondary-button">リセット</button>
+        </div>
+
+        <div class="filter-grid">
+          <label>
+            日付
+            <input type="date" id="filter-date">
+          </label>
+
+          <label>
+            競馬場
+            <select id="filter-place">
+              <option value="">すべて</option>
+            </select>
+          </label>
+
+          <label>
+            券種
+            <select id="filter-ticket-type">
+              <option value="">すべて</option>
+              <option value="単勝">単勝</option>
+              <option value="複勝">複勝</option>
+              <option value="ワイド">ワイド</option>
+              <option value="馬連">馬連</option>
+              <option value="馬単">馬単</option>
+              <option value="三連複">三連複</option>
+              <option value="三連単">三連単</option>
+            </select>
+          </label>
+
+          <label>
+            結果
+            <select id="filter-status">
+              <option value="">すべて</option>
+              <option value="未確定">未確定</option>
+              <option value="的中">的中</option>
+              <option value="不的中">不的中</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
       <section class="ticket-summary-section" aria-labelledby="ticket-summary-title">
         <h2 id="ticket-summary-title">券種別成績</h2>
         <div id="ticket-summary-list" class="ticket-summary-list"></div>

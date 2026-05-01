@@ -1,5 +1,6 @@
 const STORAGE_KEY = "keibaBetMemoList";
 const TICKET_TYPES = ["単勝", "複勝", "ワイド", "馬連", "馬単", "三連複", "三連単"];
+const STATUS_TYPES = ["未確定", "的中", "不的中"];
 
 const betForm = document.getElementById("bet-form");
 const dateInput = document.getElementById("date");
@@ -18,6 +19,11 @@ const profitLoss = document.getElementById("profit-loss");
 const recoveryRate = document.getElementById("recovery-rate");
 const betCount = document.getElementById("bet-count");
 const ticketSummaryList = document.getElementById("ticket-summary-list");
+const filterDateInput = document.getElementById("filter-date");
+const filterPlaceInput = document.getElementById("filter-place");
+const filterTicketTypeInput = document.getElementById("filter-ticket-type");
+const filterStatusInput = document.getElementById("filter-status");
+const resetFiltersButton = document.getElementById("reset-filters");
 
 let bets = loadBets();
 
@@ -44,6 +50,19 @@ betForm.addEventListener("submit", function (event) {
   saveBets();
   renderBets();
   resetForm();
+});
+
+filterDateInput.addEventListener("input", renderBets);
+filterPlaceInput.addEventListener("change", renderBets);
+filterTicketTypeInput.addEventListener("change", renderBets);
+filterStatusInput.addEventListener("change", renderBets);
+
+resetFiltersButton.addEventListener("click", function () {
+  filterDateInput.value = "";
+  filterPlaceInput.value = "";
+  filterTicketTypeInput.value = "";
+  filterStatusInput.value = "";
+  renderBets();
 });
 
 // 削除ボタンは一覧の中にあとから作るため、一覧全体でクリックを受け取ります。
@@ -102,20 +121,28 @@ function saveBets() {
 }
 
 function renderBets() {
+  updatePlaceFilterOptions();
+
+  const filteredBets = getFilteredBets();
+
   betList.innerHTML = "";
 
   if (bets.length === 0) {
+    emptyMessage.textContent = "まだ買い目が登録されていません。";
+    emptyMessage.style.display = "block";
+  } else if (filteredBets.length === 0) {
+    emptyMessage.textContent = "条件に合う買い目がありません。";
     emptyMessage.style.display = "block";
   } else {
     emptyMessage.style.display = "none";
   }
 
-  bets.forEach(function (bet) {
+  filteredBets.forEach(function (bet) {
     const card = createBetCard(bet);
     betList.appendChild(card);
   });
 
-  updateSummary();
+  updateSummary(filteredBets);
 }
 
 function createBetCard(bet) {
@@ -200,7 +227,7 @@ function normalizeBet(bet) {
 }
 
 function normalizeStatus(status) {
-  if (status === "的中" || status === "不的中" || status === "未確定") {
+  if (STATUS_TYPES.includes(status)) {
     return status;
   }
 
@@ -242,7 +269,7 @@ function updateBetPayout(id, payout) {
 
   bet.payout = Number(payout) || 0;
   saveBets();
-  updateSummary();
+  updateSummary(getFilteredBets());
 }
 
 function findBet(id) {
@@ -251,12 +278,63 @@ function findBet(id) {
   });
 }
 
-function updateSummary() {
-  const amountSum = bets.reduce(function (total, bet) {
+function getFilteredBets() {
+  const selectedDate = filterDateInput.value;
+  const selectedPlace = filterPlaceInput.value;
+  const selectedTicketType = filterTicketTypeInput.value;
+  const selectedStatus = filterStatusInput.value;
+
+  return bets.filter(function (bet) {
+    const dateMatches = selectedDate === "" || bet.date === selectedDate;
+    const placeMatches = selectedPlace === "" || bet.place === selectedPlace;
+    const ticketTypeMatches = selectedTicketType === "" || bet.ticketType === selectedTicketType;
+    const statusMatches = selectedStatus === "" || bet.status === selectedStatus;
+
+    return dateMatches && placeMatches && ticketTypeMatches && statusMatches;
+  });
+}
+
+function updatePlaceFilterOptions() {
+  const selectedPlace = filterPlaceInput.value;
+  const places = getPlaceOptions();
+
+  filterPlaceInput.innerHTML = '<option value="">すべて</option>';
+
+  places.forEach(function (place) {
+    const option = document.createElement("option");
+    option.value = place;
+    option.textContent = place;
+    filterPlaceInput.appendChild(option);
+  });
+
+  // 削除などで選択中の競馬場がなくなった場合は「すべて」に戻します。
+  if (selectedPlace !== "" && places.includes(selectedPlace)) {
+    filterPlaceInput.value = selectedPlace;
+  } else {
+    filterPlaceInput.value = "";
+  }
+}
+
+function getPlaceOptions() {
+  const places = bets
+    .map(function (bet) {
+      return bet.place || "";
+    })
+    .filter(function (place) {
+      return place !== "";
+    });
+
+  return Array.from(new Set(places)).sort(function (a, b) {
+    return a.localeCompare(b, "ja");
+  });
+}
+
+function updateSummary(targetBets) {
+  const amountSum = targetBets.reduce(function (total, bet) {
     return total + bet.amount;
   }, 0);
 
-  const payoutSum = bets.reduce(function (total, bet) {
+  const payoutSum = targetBets.reduce(function (total, bet) {
     return total + bet.payout;
   }, 0);
 
@@ -268,12 +346,12 @@ function updateSummary() {
   profitLoss.textContent = formatSignedYen(balance);
   profitLoss.className = balance >= 0 ? "plus" : "minus";
   recoveryRate.textContent = recoveryRateValue.toFixed(1);
-  betCount.textContent = bets.length + "件";
-  updateTicketTypeSummary();
+  betCount.textContent = "表示中：" + targetBets.length + "件 / 全" + bets.length + "件";
+  updateTicketTypeSummary(targetBets);
 }
 
-function updateTicketTypeSummary() {
-  const ticketSummaries = createTicketTypeSummaries();
+function updateTicketTypeSummary(targetBets) {
+  const ticketSummaries = createTicketTypeSummaries(targetBets);
 
   ticketSummaryList.innerHTML = "";
 
@@ -283,7 +361,7 @@ function updateTicketTypeSummary() {
   });
 }
 
-function createTicketTypeSummaries() {
+function createTicketTypeSummaries(targetBets) {
   const summaries = {};
 
   // 表示対象の券種を先に作っておくと、登録が0件でも全券種を表示できます。
@@ -296,7 +374,7 @@ function createTicketTypeSummaries() {
     };
   });
 
-  bets.forEach(function (bet) {
+  targetBets.forEach(function (bet) {
     const summary = summaries[bet.ticketType];
 
     if (summary === undefined) {
