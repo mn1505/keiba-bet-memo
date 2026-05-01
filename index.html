@@ -92,6 +92,31 @@
       </div>
       <p id="csv-message" class="csv-message" aria-live="polite"></p>
 
+      <section class="backup-section" aria-labelledby="backup-title">
+        <h2 id="backup-title">バックアップ/復元</h2>
+        <div class="backup-grid">
+          <button type="button" id="export-backup" class="backup-button">全データをJSONバックアップ</button>
+
+          <div class="restore-controls">
+            <label>
+              復元ファイル
+              <input type="file" id="restore-file" accept="application/json,.json">
+            </label>
+
+            <label>
+              復元方式
+              <select id="restore-mode">
+                <option value="replace">現在のデータを置き換える</option>
+                <option value="append">現在のデータに追加する</option>
+              </select>
+            </label>
+
+            <button type="button" id="restore-backup" class="secondary-button">JSONバックアップを復元</button>
+          </div>
+        </div>
+        <p id="backup-message" class="backup-message" aria-live="polite"></p>
+      </section>
+
       <section class="filter-section" aria-labelledby="filter-title">
         <div class="filter-header">
           <h2 id="filter-title">絞り込み</h2>

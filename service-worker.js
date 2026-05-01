@@ -1,4 +1,4 @@
-const CACHE_NAME = "kaime-memo-v5-csv-export";
+const CACHE_NAME = "kaime-memo-v6-backup-restore";
 
 const CACHE_FILES = [
   "./",

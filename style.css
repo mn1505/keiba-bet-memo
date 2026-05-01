@@ -94,6 +94,7 @@ textarea {
 .primary-button,
 .secondary-button,
 .export-button,
+.backup-button,
 .delete-button {
   border: 0;
   border-radius: 6px;
@@ -135,6 +136,18 @@ textarea {
 
 .export-button:hover {
   background: #1d4d6c;
+}
+
+.backup-button {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  color: #ffffff;
+  background: #6b4f1d;
+}
+
+.backup-button:hover {
+  background: #563f17;
 }
 
 .list-header {
@@ -188,6 +201,46 @@ textarea {
 }
 
 .csv-message.is-error {
+  color: #b23b3b;
+}
+
+.backup-section {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid #d8e0d5;
+  border-radius: 8px;
+  background: #fffdf7;
+}
+
+.backup-section h2 {
+  margin-bottom: 12px;
+}
+
+.backup-grid {
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) minmax(260px, 2fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.restore-controls {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.2fr) minmax(160px, 1fr);
+  gap: 12px;
+}
+
+.restore-controls button {
+  grid-column: 1 / -1;
+}
+
+.backup-message {
+  min-height: 24px;
+  margin: 10px 0 0;
+  color: #245f86;
+  font-weight: 700;
+}
+
+.backup-message.is-error {
   color: #b23b3b;
 }
 
@@ -436,6 +489,15 @@ textarea {
 
   .filter-section {
     padding: 12px;
+  }
+
+  .backup-section {
+    padding: 12px;
+  }
+
+  .backup-grid,
+  .restore-controls {
+    grid-template-columns: 1fr;
   }
 
   .filter-header {

@@ -1,4 +1,6 @@
 const STORAGE_KEY = "keibaBetMemoList";
+const APP_NAME = "keiba-bet-memo";
+const APP_VERSION = "v6";
 const TICKET_TYPES = ["単勝", "複勝", "ワイド", "馬連", "馬単", "三連複", "三連単"];
 const STATUS_TYPES = ["未確定", "的中", "不的中"];
 
@@ -26,6 +28,11 @@ const filterStatusInput = document.getElementById("filter-status");
 const resetFiltersButton = document.getElementById("reset-filters");
 const exportCsvButton = document.getElementById("export-csv");
 const csvMessage = document.getElementById("csv-message");
+const exportBackupButton = document.getElementById("export-backup");
+const restoreFileInput = document.getElementById("restore-file");
+const restoreModeInput = document.getElementById("restore-mode");
+const restoreBackupButton = document.getElementById("restore-backup");
+const backupMessage = document.getElementById("backup-message");
 
 let bets = loadBets();
 
@@ -68,6 +75,8 @@ resetFiltersButton.addEventListener("click", function () {
 });
 
 exportCsvButton.addEventListener("click", exportVisibleBetsToCsv);
+exportBackupButton.addEventListener("click", exportBackupJson);
+restoreBackupButton.addEventListener("click", restoreBackupJson);
 
 // 削除ボタンは一覧の中にあとから作るため、一覧全体でクリックを受け取ります。
 betList.addEventListener("click", function (event) {
@@ -231,6 +240,17 @@ function normalizeBet(bet) {
   };
 }
 
+function normalizeImportedBet(bet, usedIds) {
+  const normalizedBet = normalizeBet(bet);
+
+  if (normalizedBet.id === undefined || normalizedBet.id === null || usedIds.has(String(normalizedBet.id))) {
+    normalizedBet.id = createUniqueId(usedIds);
+  }
+
+  usedIds.add(String(normalizedBet.id));
+  return normalizedBet;
+}
+
 function normalizeStatus(status) {
   if (STATUS_TYPES.includes(status)) {
     return status;
@@ -298,6 +318,118 @@ function exportVisibleBetsToCsv() {
   showCsvMessage(targetBets.length + "件のCSVを出力しました。", false);
 }
 
+function exportBackupJson() {
+  const backupData = {
+    appName: APP_NAME,
+    version: APP_VERSION,
+    exportedAt: new Date().toISOString(),
+    data: {
+      bets: bets.map(function (bet) {
+        return normalizeBet(bet);
+      })
+    }
+  };
+
+  const jsonText = JSON.stringify(backupData, null, 2);
+  const fileName = "keiba-bet-memo-backup-" + getTodayText() + ".json";
+
+  downloadTextFile(jsonText, fileName, "application/json;charset=utf-8;");
+  showBackupMessage("全" + bets.length + "件のJSONバックアップを保存しました。", false);
+}
+
+function restoreBackupJson() {
+  const file = restoreFileInput.files[0];
+  const mode = restoreModeInput.value;
+
+  if (file === undefined) {
+    showBackupMessage("復元するJSONファイルを選択してください。", true);
+    return;
+  }
+
+  const message = mode === "replace"
+    ? "現在のデータをバックアップ内容で置き換えます。実行しますか？"
+    : "バックアップ内容を現在のデータに追加します。実行しますか？";
+
+  if (!window.confirm(message)) {
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.addEventListener("load", function () {
+    try {
+      const importedBets = parseBackupJson(reader.result);
+      const usedIds = createUsedIdSet(mode === "append" ? bets : []);
+      const restoredBets = importedBets.map(function (bet) {
+        return normalizeImportedBet(bet, usedIds);
+      });
+
+      bets = mode === "append" ? bets.concat(restoredBets) : restoredBets;
+      saveBets();
+      renderBets();
+      restoreFileInput.value = "";
+
+      const actionText = mode === "append" ? "追加" : "置き換え";
+      showBackupMessage(restoredBets.length + "件のデータを" + actionText + "復元しました。", false);
+    } catch (error) {
+      showBackupMessage(error.message, true);
+    }
+  });
+
+  reader.addEventListener("error", function () {
+    showBackupMessage("ファイルを読み込めませんでした。別のJSONバックアップを選んでください。", true);
+  });
+
+  reader.readAsText(file);
+}
+
+function parseBackupJson(jsonText) {
+  let parsedBackup;
+
+  try {
+    parsedBackup = JSON.parse(jsonText);
+  } catch (error) {
+    throw new Error("JSONの形式が正しくありません。バックアップファイルを確認してください。");
+  }
+
+  if (parsedBackup === null || typeof parsedBackup !== "object") {
+    throw new Error("バックアップ形式が正しくありません。");
+  }
+
+  const backupBets = getBackupBets(parsedBackup);
+
+  if (!Array.isArray(backupBets)) {
+    throw new Error("買い目データが見つかりません。v6のJSONバックアップを選んでください。");
+  }
+
+  validateBackupBets(backupBets);
+
+  return backupBets;
+}
+
+function getBackupBets(parsedBackup) {
+  if (parsedBackup.data && Array.isArray(parsedBackup.data.bets)) {
+    return parsedBackup.data.bets;
+  }
+
+  // 念のため、data自体が配列の古い/手作りJSONも読み込めるようにします。
+  if (Array.isArray(parsedBackup.data)) {
+    return parsedBackup.data;
+  }
+
+  return null;
+}
+
+function validateBackupBets(backupBets) {
+  const hasInvalidBet = backupBets.some(function (bet) {
+    return bet === null || typeof bet !== "object" || Array.isArray(bet);
+  });
+
+  if (hasInvalidBet) {
+    throw new Error("買い目データの形式が正しくありません。別のJSONバックアップを選んでください。");
+  }
+}
+
 function createCsvText(targetBets) {
   const header = [
     "date",
@@ -353,7 +485,11 @@ function escapeCsvValue(value) {
 }
 
 function downloadCsv(csvText, fileName) {
-  const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+  downloadTextFile(csvText, fileName, "text/csv;charset=utf-8;");
+}
+
+function downloadTextFile(text, fileName, fileType) {
+  const blob = new Blob([text], { type: fileType });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
 
@@ -368,6 +504,28 @@ function downloadCsv(csvText, fileName) {
   }, 1000);
 }
 
+function createUsedIdSet(targetBets) {
+  const usedIds = new Set();
+
+  targetBets.forEach(function (bet) {
+    if (bet.id !== undefined && bet.id !== null) {
+      usedIds.add(String(bet.id));
+    }
+  });
+
+  return usedIds;
+}
+
+function createUniqueId(usedIds) {
+  let id = Date.now();
+
+  while (usedIds.has(String(id))) {
+    id += 1;
+  }
+
+  return id;
+}
+
 function showCsvMessage(message, isError) {
   csvMessage.textContent = message;
   csvMessage.classList.toggle("is-error", isError);
@@ -376,6 +534,11 @@ function showCsvMessage(message, isError) {
 function clearCsvMessage() {
   csvMessage.textContent = "";
   csvMessage.classList.remove("is-error");
+}
+
+function showBackupMessage(message, isError) {
+  backupMessage.textContent = message;
+  backupMessage.classList.toggle("is-error", isError);
 }
 
 function getFilteredBets() {
