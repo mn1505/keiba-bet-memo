@@ -1,4 +1,4 @@
-const CACHE_NAME = "kaime-memo-v6-backup-restore";
+const CACHE_NAME = "kaime-memo-v7-ui-selects";
 
 const CACHE_FILES = [
   "./",

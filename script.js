@@ -1,6 +1,6 @@
 const STORAGE_KEY = "keibaBetMemoList";
 const APP_NAME = "keiba-bet-memo";
-const APP_VERSION = "v6";
+const APP_VERSION = "v7";
 const TICKET_TYPES = ["単勝", "複勝", "ワイド", "馬連", "馬単", "三連複", "三連単"];
 const STATUS_TYPES = ["未確定", "的中", "不的中"];
 
@@ -37,10 +37,23 @@ const backupMessage = document.getElementById("backup-message");
 let bets = loadBets();
 
 setToday();
+setSelectValidationMessages();
 renderBets();
 
 betForm.addEventListener("submit", function (event) {
   event.preventDefault();
+
+  if (!placeInput.value) {
+    placeInput.setCustomValidity("競馬場を選択してください。");
+    placeInput.reportValidity();
+    return;
+  }
+
+  if (!raceInput.value) {
+    raceInput.setCustomValidity("レース番号を選択してください。");
+    raceInput.reportValidity();
+    return;
+  }
 
   const bet = {
     id: Date.now(),
@@ -77,6 +90,14 @@ resetFiltersButton.addEventListener("click", function () {
 exportCsvButton.addEventListener("click", exportVisibleBetsToCsv);
 exportBackupButton.addEventListener("click", exportBackupJson);
 restoreBackupButton.addEventListener("click", restoreBackupJson);
+
+placeInput.addEventListener("change", function () {
+  placeInput.setCustomValidity("");
+});
+
+raceInput.addEventListener("change", function () {
+  raceInput.setCustomValidity("");
+});
 
 // 削除ボタンは一覧の中にあとから作るため、一覧全体でクリックを受け取ります。
 betList.addEventListener("click", function (event) {
@@ -696,6 +717,20 @@ function resetForm() {
   betForm.reset();
   setToday();
   placeInput.focus();
+}
+
+function setSelectValidationMessages() {
+  placeInput.addEventListener("invalid", function () {
+    if (!placeInput.value) {
+      placeInput.setCustomValidity("競馬場を選択してください。");
+    }
+  });
+
+  raceInput.addEventListener("invalid", function () {
+    if (!raceInput.value) {
+      raceInput.setCustomValidity("レース番号を選択してください。");
+    }
+  });
 }
 
 function setToday() {

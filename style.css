@@ -6,15 +6,16 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #243024;
-  background: #f4f7f2;
+  color: #202938;
+  background: #f5f7fa;
   line-height: 1.6;
 }
 
 .app-header {
   padding: 28px max(20px, env(safe-area-inset-right)) 28px max(20px, env(safe-area-inset-left));
   color: #ffffff;
-  background: #1f6f4a;
+  background: #172033;
+  border-bottom: 1px solid #0f1725;
 }
 
 .app-header h1 {
@@ -26,7 +27,7 @@ body {
 .app-header p {
   max-width: 1040px;
   margin: 0 auto;
-  color: #e7f4ec;
+  color: #d8dee8;
 }
 
 .app-layout {
@@ -40,8 +41,8 @@ body {
 .form-section,
 .list-section {
   padding: 20px;
-  border: 1px solid #d8e0d5;
-  border-radius: 8px;
+  border: 1px solid #d6dde8;
+  border-radius: 4px;
   background: #ffffff;
 }
 
@@ -72,19 +73,19 @@ textarea {
   width: 100%;
   min-height: 44px;
   padding: 10px 12px;
-  border: 1px solid #c8d2c5;
-  border-radius: 6px;
+  border: 1px solid #c5cedb;
+  border-radius: 4px;
   font: inherit;
   font-size: 16px;
-  color: #243024;
+  color: #202938;
   background: #ffffff;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 3px solid #cbe9d7;
-  border-color: #268756;
+  outline: 3px solid #d7e8fb;
+  border-color: #2f6fa8;
 }
 
 textarea {
@@ -97,7 +98,7 @@ textarea {
 .backup-button,
 .delete-button {
   border: 0;
-  border-radius: 6px;
+  border-radius: 4px;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
@@ -107,23 +108,23 @@ textarea {
   min-height: 48px;
   padding: 12px 16px;
   color: #ffffff;
-  background: #1f6f4a;
+  background: #1c4f82;
 }
 
 .primary-button:hover {
-  background: #185a3c;
+  background: #173f68;
 }
 
 .secondary-button {
   min-height: 44px;
   padding: 10px 14px;
-  color: #1f4e38;
-  background: #e8f1ea;
-  border: 1px solid #b9c8b4;
+  color: #202938;
+  background: #edf1f6;
+  border: 1px solid #c5cedb;
 }
 
 .secondary-button:hover {
-  background: #dbe9df;
+  background: #e1e7ef;
 }
 
 .export-button {
@@ -131,11 +132,11 @@ textarea {
   min-height: 48px;
   padding: 12px 16px;
   color: #ffffff;
-  background: #245f86;
+  background: #31445d;
 }
 
 .export-button:hover {
-  background: #1d4d6c;
+  background: #26364b;
 }
 
 .backup-button {
@@ -143,11 +144,11 @@ textarea {
   min-height: 48px;
   padding: 12px 16px;
   color: #ffffff;
-  background: #6b4f1d;
+  background: #4b5565;
 }
 
 .backup-button:hover {
-  background: #563f17;
+  background: #394251;
 }
 
 .list-header {
@@ -169,7 +170,7 @@ textarea {
 }
 
 #bet-count {
-  color: #647064;
+  color: #657285;
 }
 
 .summary-box {
@@ -177,9 +178,10 @@ textarea {
   gap: 4px;
   min-width: 190px;
   padding: 10px 12px;
-  border-radius: 6px;
-  color: #163b2a;
-  background: #e5f2e9;
+  border: 1px solid #d6dde8;
+  border-radius: 4px;
+  color: #202938;
+  background: #f3f8ff;
   font-weight: 700;
 }
 
@@ -196,7 +198,7 @@ textarea {
 .csv-message {
   min-height: 24px;
   margin: -4px 0 12px;
-  color: #245f86;
+  color: #1c4f82;
   font-weight: 700;
 }
 
@@ -207,9 +209,9 @@ textarea {
 .backup-section {
   margin-bottom: 16px;
   padding: 14px;
-  border: 1px solid #d8e0d5;
-  border-radius: 8px;
-  background: #fffdf7;
+  border: 1px solid #d6dde8;
+  border-radius: 4px;
+  background: #f8fafc;
 }
 
 .backup-section h2 {
@@ -236,7 +238,7 @@ textarea {
 .backup-message {
   min-height: 24px;
   margin: 10px 0 0;
-  color: #245f86;
+  color: #1c4f82;
   font-weight: 700;
 }
 
@@ -247,9 +249,9 @@ textarea {
 .filter-section {
   margin-bottom: 16px;
   padding: 14px;
-  border: 1px solid #d8e0d5;
-  border-radius: 8px;
-  background: #fafcf9;
+  border: 1px solid #d6dde8;
+  border-radius: 4px;
+  background: #f8fafc;
 }
 
 .filter-header {
@@ -266,8 +268,13 @@ textarea {
 
 .filter-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(130px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+.filter-grid label {
+  min-width: 0;
 }
 
 .filter-grid input,
@@ -292,9 +299,9 @@ textarea {
 .ticket-summary-card {
   min-width: 0;
   padding: 12px;
-  border: 1px solid #d8e0d5;
-  border-radius: 8px;
-  background: #fafcf9;
+  border: 1px solid #d6dde8;
+  border-radius: 4px;
+  background: #ffffff;
 }
 
 .ticket-summary-card h3 {
@@ -317,7 +324,7 @@ textarea {
 
 .ticket-summary-card dt {
   flex: 0 0 auto;
-  color: #657065;
+  color: #657285;
   font-size: 13px;
 }
 
@@ -330,7 +337,7 @@ textarea {
 }
 
 .plus {
-  color: #14643f;
+  color: #11633f;
 }
 
 .minus {
@@ -339,11 +346,11 @@ textarea {
 
 .empty-message {
   padding: 20px;
-  border: 1px dashed #b9c8b4;
-  border-radius: 8px;
-  color: #657065;
+  border: 1px dashed #aeb8c6;
+  border-radius: 4px;
+  color: #657285;
   text-align: center;
-  background: #fafcf9;
+  background: #f8fafc;
 }
 
 .bet-list {
@@ -353,8 +360,8 @@ textarea {
 
 .bet-card {
   padding: 14px;
-  border: 1px solid #d8e0d5;
-  border-radius: 8px;
+  border: 1px solid #d6dde8;
+  border-radius: 4px;
   background: #ffffff;
 }
 
@@ -373,7 +380,7 @@ textarea {
 
 .bet-date {
   margin: 2px 0 0;
-  color: #657065;
+  color: #657285;
   font-size: 14px;
 }
 
@@ -389,7 +396,7 @@ textarea {
 }
 
 .bet-details dt {
-  color: #657065;
+  color: #657285;
   font-size: 13px;
 }
 
@@ -406,12 +413,16 @@ textarea {
 }
 
 .payout-input:disabled {
-  color: #657065;
-  background: #eef2ec;
+  color: #657285;
+  background: #edf1f6;
 }
 
 .bet-memo {
   grid-column: 1 / -1;
+  padding: 10px 12px;
+  border: 1px solid #d7e8fb;
+  border-radius: 4px;
+  background: #eef6ff;
 }
 
 .delete-button {
@@ -419,16 +430,16 @@ textarea {
   min-height: 44px;
   padding: 8px 10px;
   color: #ffffff;
-  background: #b23b3b;
+  background: #8d3440;
 }
 
 .delete-button:hover {
-  background: #912f2f;
+  background: #732936;
 }
 
 @media (max-width: 760px) {
   body {
-    background: #ffffff;
+    background: #f5f7fa;
   }
 
   .app-header {
@@ -505,7 +516,7 @@ textarea {
   }
 
   .filter-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
   }
 
@@ -553,5 +564,9 @@ textarea {
   .list-section {
     padding-right: 12px;
     padding-left: 12px;
+  }
+
+  .filter-grid {
+    grid-template-columns: 1fr;
   }
 }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#1f6f4a">
+  <meta name="theme-color" content="#172033">
   <meta name="description" content="競馬の買い目をスマホに保存できるメモアプリです。">
   <title>買い目メモ</title>
   <link rel="manifest" href="manifest.json">
@@ -32,12 +32,38 @@
 
           <label>
             競馬場
-            <input type="text" id="place" placeholder="例：東京、京都、大井" required>
+            <select id="place" required>
+              <option value="">競馬場を選択</option>
+              <option value="札幌">札幌</option>
+              <option value="函館">函館</option>
+              <option value="福島">福島</option>
+              <option value="新潟">新潟</option>
+              <option value="東京">東京</option>
+              <option value="中山">中山</option>
+              <option value="中京">中京</option>
+              <option value="京都">京都</option>
+              <option value="阪神">阪神</option>
+              <option value="小倉">小倉</option>
+            </select>
           </label>
 
           <label>
-            レース番号・レース名
-            <input type="text" id="race" placeholder="例：東京11R、天皇賞・春" required>
+            レース番号
+            <select id="race" required>
+              <option value="">レースを選択</option>
+              <option value="1R">1R</option>
+              <option value="2R">2R</option>
+              <option value="3R">3R</option>
+              <option value="4R">4R</option>
+              <option value="5R">5R</option>
+              <option value="6R">6R</option>
+              <option value="7R">7R</option>
+              <option value="8R">8R</option>
+              <option value="9R">9R</option>
+              <option value="10R">10R</option>
+              <option value="11R">11R</option>
+              <option value="12R">12R</option>
+            </select>
           </label>
 
           <label>
