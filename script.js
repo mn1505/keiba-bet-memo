@@ -1,4 +1,5 @@
 const STORAGE_KEY = "keibaBetMemoList";
+const TICKET_TYPES = ["単勝", "複勝", "ワイド", "馬連", "馬単", "三連複", "三連単"];
 
 const betForm = document.getElementById("bet-form");
 const dateInput = document.getElementById("date");
@@ -16,6 +17,7 @@ const totalPayout = document.getElementById("total-payout");
 const profitLoss = document.getElementById("profit-loss");
 const recoveryRate = document.getElementById("recovery-rate");
 const betCount = document.getElementById("bet-count");
+const ticketSummaryList = document.getElementById("ticket-summary-list");
 
 let bets = loadBets();
 
@@ -267,6 +269,86 @@ function updateSummary() {
   profitLoss.className = balance >= 0 ? "plus" : "minus";
   recoveryRate.textContent = recoveryRateValue.toFixed(1);
   betCount.textContent = bets.length + "件";
+  updateTicketTypeSummary();
+}
+
+function updateTicketTypeSummary() {
+  const ticketSummaries = createTicketTypeSummaries();
+
+  ticketSummaryList.innerHTML = "";
+
+  ticketSummaries.forEach(function (summary) {
+    const card = createTicketSummaryCard(summary);
+    ticketSummaryList.appendChild(card);
+  });
+}
+
+function createTicketTypeSummaries() {
+  const summaries = {};
+
+  // 表示対象の券種を先に作っておくと、登録が0件でも全券種を表示できます。
+  TICKET_TYPES.forEach(function (ticketType) {
+    summaries[ticketType] = {
+      ticketType: ticketType,
+      count: 0,
+      amountSum: 0,
+      payoutSum: 0
+    };
+  });
+
+  bets.forEach(function (bet) {
+    const summary = summaries[bet.ticketType];
+
+    if (summary === undefined) {
+      return;
+    }
+
+    summary.count += 1;
+    summary.amountSum += Number(bet.amount) || 0;
+    summary.payoutSum += Number(bet.payout) || 0;
+  });
+
+  return TICKET_TYPES.map(function (ticketType) {
+    const summary = summaries[ticketType];
+    summary.balance = summary.payoutSum - summary.amountSum;
+    summary.recoveryRate = summary.amountSum === 0 ? 0 : (summary.payoutSum / summary.amountSum) * 100;
+    return summary;
+  });
+}
+
+function createTicketSummaryCard(summary) {
+  const card = document.createElement("article");
+  card.className = "ticket-summary-card";
+
+  const balanceClass = summary.balance >= 0 ? "plus" : "minus";
+
+  card.innerHTML = `
+    <h3>${escapeHtml(summary.ticketType)}</h3>
+    <dl>
+      <div>
+        <dt>件数</dt>
+        <dd>${summary.count}件</dd>
+      </div>
+      <div>
+        <dt>購入</dt>
+        <dd>${formatYen(summary.amountSum)}円</dd>
+      </div>
+      <div>
+        <dt>払戻</dt>
+        <dd>${formatYen(summary.payoutSum)}円</dd>
+      </div>
+      <div>
+        <dt>収支</dt>
+        <dd class="${balanceClass}">${formatSignedYen(summary.balance)}円</dd>
+      </div>
+      <div>
+        <dt>回収率</dt>
+        <dd>${summary.recoveryRate.toFixed(1)}%</dd>
+      </div>
+    </dl>
+  `;
+
+  return card;
 }
 
 function resetForm() {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "kaime-memo-v3";
+const CACHE_NAME = "kaime-memo-v3-ticket-summary";
 
 const CACHE_FILES = [
   "./",
