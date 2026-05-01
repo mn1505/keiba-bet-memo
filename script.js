@@ -24,6 +24,8 @@ const filterPlaceInput = document.getElementById("filter-place");
 const filterTicketTypeInput = document.getElementById("filter-ticket-type");
 const filterStatusInput = document.getElementById("filter-status");
 const resetFiltersButton = document.getElementById("reset-filters");
+const exportCsvButton = document.getElementById("export-csv");
+const csvMessage = document.getElementById("csv-message");
 
 let bets = loadBets();
 
@@ -64,6 +66,8 @@ resetFiltersButton.addEventListener("click", function () {
   filterStatusInput.value = "";
   renderBets();
 });
+
+exportCsvButton.addEventListener("click", exportVisibleBetsToCsv);
 
 // 削除ボタンは一覧の中にあとから作るため、一覧全体でクリックを受け取ります。
 betList.addEventListener("click", function (event) {
@@ -122,6 +126,7 @@ function saveBets() {
 
 function renderBets() {
   updatePlaceFilterOptions();
+  clearCsvMessage();
 
   const filteredBets = getFilteredBets();
 
@@ -276,6 +281,101 @@ function findBet(id) {
   return bets.find(function (bet) {
     return bet.id === id;
   });
+}
+
+function exportVisibleBetsToCsv() {
+  // CSV出力も画面表示と同じ絞り込み結果を使います。
+  const targetBets = getFilteredBets();
+
+  if (targetBets.length === 0) {
+    showCsvMessage("CSV出力できる買い目がありません。絞り込み条件を変更してください。", true);
+    return;
+  }
+
+  const csvText = createCsvText(targetBets);
+  const fileName = "keiba-bet-memo-" + getTodayText() + ".csv";
+  downloadCsv(csvText, fileName);
+  showCsvMessage(targetBets.length + "件のCSVを出力しました。", false);
+}
+
+function createCsvText(targetBets) {
+  const header = [
+    "date",
+    "track",
+    "race",
+    "betType",
+    "combination",
+    "amount",
+    "status",
+    "payout",
+    "profit",
+    "memo"
+  ];
+
+  const rows = targetBets.map(function (bet) {
+    const amount = Number(bet.amount) || 0;
+    const payout = Number(bet.payout) || 0;
+
+    return [
+      bet.date,
+      bet.place,
+      bet.race,
+      bet.ticketType,
+      bet.betNumbers,
+      amount,
+      bet.status,
+      payout,
+      payout - amount,
+      bet.memo
+    ];
+  });
+
+  const csvRows = [header].concat(rows).map(function (row) {
+    return row.map(escapeCsvValue).join(",");
+  });
+
+  // Excelで日本語が文字化けしにくいように、UTF-8 BOMを先頭に付けます。
+  return "\uFEFF" + csvRows.join("\r\n");
+}
+
+function escapeCsvValue(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  const text = String(value);
+
+  if (text.includes(",") || text.includes("\n") || text.includes("\r") || text.includes('"')) {
+    return '"' + text.replace(/"/g, '""') + '"';
+  }
+
+  return text;
+}
+
+function downloadCsv(csvText, fileName) {
+  const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  setTimeout(function () {
+    URL.revokeObjectURL(url);
+  }, 1000);
+}
+
+function showCsvMessage(message, isError) {
+  csvMessage.textContent = message;
+  csvMessage.classList.toggle("is-error", isError);
+}
+
+function clearCsvMessage() {
+  csvMessage.textContent = "";
+  csvMessage.classList.remove("is-error");
 }
 
 function getFilteredBets() {
@@ -436,13 +536,16 @@ function resetForm() {
 }
 
 function setToday() {
+  dateInput.value = getTodayText();
+}
+
+function getTodayText() {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const date = String(now.getDate()).padStart(2, "0");
-  const today = year + "-" + month + "-" + date;
 
-  dateInput.value = today;
+  return year + "-" + month + "-" + date;
 }
 
 function formatYen(number) {

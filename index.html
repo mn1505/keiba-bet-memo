@@ -80,13 +80,17 @@
           <h2 id="list-title">登録した買い目</h2>
           <p id="bet-count">0件</p>
         </div>
-        <div class="summary-box" aria-label="集計">
-          <p>購入：<span id="total-amount">0</span>円</p>
-          <p>払戻：<span id="total-payout">0</span>円</p>
-          <p>収支：<span id="profit-loss">0</span>円</p>
-          <p>回収率：<span id="recovery-rate">0.0</span>%</p>
+        <div class="list-actions">
+          <button type="button" id="export-csv" class="export-button">表示中のデータをCSV出力</button>
+          <div class="summary-box" aria-label="集計">
+            <p>購入：<span id="total-amount">0</span>円</p>
+            <p>払戻：<span id="total-payout">0</span>円</p>
+            <p>収支：<span id="profit-loss">0</span>円</p>
+            <p>回収率：<span id="recovery-rate">0.0</span>%</p>
+          </div>
         </div>
       </div>
+      <p id="csv-message" class="csv-message" aria-live="polite"></p>
 
       <section class="filter-section" aria-labelledby="filter-title">
         <div class="filter-header">
