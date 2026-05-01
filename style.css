@@ -140,12 +140,30 @@ textarea {
 .secondary-button,
 .export-button,
 .backup-button,
+.edit-button,
+.duplicate-button,
 .delete-button {
   border: 0;
   border-radius: 4px;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+}
+
+.form-buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.edit-message {
+  min-height: 22px;
+  color: #1c4f82;
+  font-weight: 700;
+}
+
+.edit-only-fields {
+  display: none;
 }
 
 .primary-button {
@@ -417,6 +435,13 @@ textarea {
   margin-bottom: 10px;
 }
 
+.bet-card-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(68px, 1fr));
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
 .bet-title {
   margin: 0;
   font-size: 17px;
@@ -469,10 +494,65 @@ textarea {
   background: #eef6ff;
 }
 
+.bet-tags-row,
+.bet-time-row {
+  grid-column: 1 / -1;
+}
+
+.bet-tags-row dd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 3px 8px;
+  border: 1px solid #c5cedb;
+  border-radius: 4px;
+  color: #31445d;
+  background: #f8fafc;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.bet-time-row dd {
+  display: grid;
+  gap: 2px;
+  color: #657285;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.edit-button,
+.duplicate-button,
 .delete-button {
-  flex: 0 0 auto;
   min-height: 44px;
   padding: 8px 10px;
+}
+
+.edit-button {
+  color: #ffffff;
+  background: #1c4f82;
+}
+
+.edit-button:hover {
+  background: #173f68;
+}
+
+.duplicate-button {
+  color: #202938;
+  background: #edf1f6;
+  border: 1px solid #c5cedb;
+}
+
+.duplicate-button:hover {
+  background: #e1e7ef;
+}
+
+.delete-button {
   color: #ffffff;
   background: #8d3440;
 }
@@ -591,10 +671,17 @@ textarea {
     display: grid;
   }
 
+  .bet-card-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
   .bet-details {
     grid-template-columns: 1fr;
   }
 
+  .edit-button,
+  .duplicate-button,
   .delete-button {
     width: 100%;
   }

@@ -109,7 +109,7 @@
 
           <label>
             金額
-            <input type="number" id="amount" min="100" step="100" placeholder="例：1000" required>
+            <input type="number" id="amount" min="0" step="1" placeholder="例：1000" required>
           </label>
         </div>
 
@@ -118,7 +118,33 @@
           <textarea id="memo" rows="3" placeholder="例：本命寄り、穴狙い、保険"></textarea>
         </label>
 
-        <button type="submit" class="primary-button">登録する</button>
+        <label>
+          タグ
+          <input type="text" id="tags" placeholder="例：本線, 保険, AI予想">
+        </label>
+
+        <div class="form-grid edit-only-fields" id="edit-only-fields">
+          <label>
+            結果
+            <select id="status">
+              <option value="未確定">未確定</option>
+              <option value="的中">的中</option>
+              <option value="不的中">不的中</option>
+            </select>
+          </label>
+
+          <label>
+            払戻金
+            <input type="number" id="payout" min="0" step="10" value="0">
+          </label>
+        </div>
+
+        <div id="edit-message" class="edit-message" aria-live="polite"></div>
+
+        <div class="form-buttons">
+          <button type="submit" id="submit-button" class="primary-button">登録する</button>
+          <button type="button" id="cancel-edit" class="secondary-button">編集をキャンセル</button>
+        </div>
       </form>
     </section>
 

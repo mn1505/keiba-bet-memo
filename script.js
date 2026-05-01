@@ -1,6 +1,6 @@
 const STORAGE_KEY = "keibaBetMemoList";
 const APP_NAME = "keiba-bet-memo";
-const APP_VERSION = "v8";
+const APP_VERSION = "v7";
 const TICKET_TYPES = ["単勝", "複勝", "ワイド", "馬連", "馬単", "三連複", "三連単"];
 const STATUS_TYPES = ["未確定", "的中", "不的中"];
 const TICKET_TYPE_FIELDS = {
@@ -24,6 +24,13 @@ const horseNumberFields = document.getElementById("horse-number-fields");
 const betNumbersError = document.getElementById("bet-numbers-error");
 const amountInput = document.getElementById("amount");
 const memoInput = document.getElementById("memo");
+const tagsInput = document.getElementById("tags");
+const statusInput = document.getElementById("status");
+const payoutInput = document.getElementById("payout");
+const editOnlyFields = document.getElementById("edit-only-fields");
+const editMessage = document.getElementById("edit-message");
+const submitButton = document.getElementById("submit-button");
+const cancelEditButton = document.getElementById("cancel-edit");
 
 const betList = document.getElementById("bet-list");
 const emptyMessage = document.getElementById("empty-message");
@@ -47,10 +54,12 @@ const restoreBackupButton = document.getElementById("restore-backup");
 const backupMessage = document.getElementById("backup-message");
 
 let bets = loadBets();
+let editingBetId = null;
 
 setToday();
 setSelectValidationMessages();
 renderHorseNumberInputs();
+setFormModeNew();
 renderBets();
 
 betForm.addEventListener("submit", function (event) {
@@ -74,20 +83,37 @@ betForm.addEventListener("submit", function (event) {
     return;
   }
 
-  const bet = {
-    id: Date.now(),
-    date: dateInput.value,
-    place: placeInput.value.trim(),
-    race: raceInput.value.trim(),
-    ticketType: ticketTypeInput.value,
-    betNumbers: combination,
-    amount: Number(amountInput.value),
-    status: "未確定",
-    payout: 0,
-    memo: memoInput.value.trim()
-  };
+  if (!confirmAmountIfNeeded()) {
+    return;
+  }
 
-  bets.push(bet);
+  const nowText = new Date().toISOString();
+  const formValues = createBetValuesFromForm(combination);
+
+  if (editingBetId === null) {
+    const bet = Object.assign({}, formValues, {
+      id: createUniqueId(createUsedIdSet(bets)),
+      createdAt: nowText,
+      updatedAt: nowText
+    });
+
+    bets.push(bet);
+  } else {
+    const bet = findBet(editingBetId);
+
+    if (bet === undefined) {
+      setFormModeNew();
+      renderBets();
+      return;
+    }
+
+    Object.assign(bet, formValues, {
+      id: bet.id,
+      createdAt: bet.createdAt || nowText,
+      updatedAt: nowText
+    });
+  }
+
   saveBets();
   renderBets();
   resetForm();
@@ -110,6 +136,8 @@ exportCsvButton.addEventListener("click", exportVisibleBetsToCsv);
 exportBackupButton.addEventListener("click", exportBackupJson);
 restoreBackupButton.addEventListener("click", restoreBackupJson);
 ticketTypeInput.addEventListener("change", renderHorseNumberInputs);
+statusInput.addEventListener("change", updateFormPayoutState);
+cancelEditButton.addEventListener("click", resetForm);
 
 placeInput.addEventListener("change", function () {
   placeInput.setCustomValidity("");
@@ -131,14 +159,21 @@ horseNumberFields.addEventListener("input", function (event) {
   clearBetNumbersError();
 });
 
-// 削除ボタンは一覧の中にあとから作るため、一覧全体でクリックを受け取ります。
+// 一覧のボタンはあとから作るため、一覧全体でクリックを受け取ります。
 betList.addEventListener("click", function (event) {
-  if (!event.target.classList.contains("delete-button")) {
+  if (event.target.classList.contains("edit-button")) {
+    startEditBet(event.target.dataset.id);
     return;
   }
 
-  const id = Number(event.target.dataset.id);
-  deleteBet(id);
+  if (event.target.classList.contains("duplicate-button")) {
+    duplicateBet(event.target.dataset.id);
+    return;
+  }
+
+  if (event.target.classList.contains("delete-button")) {
+    deleteBet(event.target.dataset.id);
+  }
 });
 
 // 的中/不的中や払戻金を変えたら、その場で保存します。
@@ -147,7 +182,7 @@ betList.addEventListener("change", function (event) {
     return;
   }
 
-  const id = Number(event.target.dataset.id);
+  const id = event.target.dataset.id;
   updateBetStatus(id, event.target.value);
 });
 
@@ -156,7 +191,7 @@ betList.addEventListener("input", function (event) {
     return;
   }
 
-  const id = Number(event.target.dataset.id);
+  const id = event.target.dataset.id;
   updateBetPayout(id, event.target.value);
 });
 
@@ -215,6 +250,9 @@ function renderBets() {
 function createBetCard(bet) {
   const card = document.createElement("article");
   card.className = "bet-card";
+  const tagsHtml = createTagsHtml(bet.tags);
+  const createdAtText = formatDateTime(bet.createdAt);
+  const updatedAtText = formatDateTime(bet.updatedAt);
 
   card.innerHTML = `
     <div class="bet-card-header">
@@ -222,7 +260,11 @@ function createBetCard(bet) {
         <h3 class="bet-title">${escapeHtml(bet.place)} ${escapeHtml(bet.race)}</h3>
         <p class="bet-date">${escapeHtml(bet.date)}</p>
       </div>
-      <button type="button" class="delete-button" data-id="${bet.id}">削除</button>
+      <div class="bet-card-actions">
+        <button type="button" class="edit-button" data-id="${bet.id}">編集</button>
+        <button type="button" class="duplicate-button" data-id="${bet.id}">複製</button>
+        <button type="button" class="delete-button" data-id="${bet.id}">削除</button>
+      </div>
     </div>
 
     <dl class="bet-details">
@@ -267,6 +309,17 @@ function createBetCard(bet) {
         <dt>メモ</dt>
         <dd>${escapeHtml(bet.memo || "なし")}</dd>
       </div>
+      <div class="bet-tags-row">
+        <dt>タグ</dt>
+        <dd>${tagsHtml}</dd>
+      </div>
+      <div class="bet-time-row">
+        <dt>日時</dt>
+        <dd>
+          <span>登録：${escapeHtml(createdAtText || "不明")}</span>
+          <span>更新：${escapeHtml(updatedAtText || "不明")}</span>
+        </dd>
+      </div>
     </dl>
   `;
 
@@ -289,7 +342,10 @@ function normalizeBet(bet) {
     amount: Number(bet.amount) || 0,
     status: normalizeStatus(status),
     payout: Number(bet.payout) || 0,
-    memo: bet.memo || ""
+    memo: bet.memo || "",
+    tags: normalizeTags(bet.tags),
+    createdAt: bet.createdAt || "",
+    updatedAt: bet.updatedAt || ""
   };
 }
 
@@ -312,11 +368,73 @@ function normalizeStatus(status) {
   return "未確定";
 }
 
+function normalizeTags(tags) {
+  if (!Array.isArray(tags)) {
+    return [];
+  }
+
+  return tags
+    .map(function (tag) {
+      return String(tag).trim();
+    })
+    .filter(function (tag) {
+      return tag !== "";
+    });
+}
+
 function deleteBet(id) {
   bets = bets.filter(function (bet) {
-    return bet.id !== id;
+    return String(bet.id) !== String(id);
   });
 
+  saveBets();
+  renderBets();
+}
+
+function startEditBet(id) {
+  const bet = findBet(id);
+
+  if (bet === undefined) {
+    return;
+  }
+
+  editingBetId = id;
+  dateInput.value = bet.date || getTodayText();
+  ensureSelectHasOption(placeInput, bet.place);
+  ensureSelectHasOption(raceInput, bet.race);
+  ensureSelectHasOption(ticketTypeInput, bet.ticketType);
+  placeInput.value = bet.place || "";
+  raceInput.value = bet.race || "";
+  ticketTypeInput.value = bet.ticketType || "";
+  renderHorseNumberInputs();
+  fillHorseNumberInputs(bet);
+  amountInput.value = bet.amount;
+  memoInput.value = bet.memo || "";
+  tagsInput.value = bet.tags.join(", ");
+  statusInput.value = normalizeStatus(bet.status);
+  payoutInput.value = Number(bet.payout) || 0;
+  setFormModeEdit(bet);
+  updateFormPayoutState();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function duplicateBet(id) {
+  const sourceBet = findBet(id);
+
+  if (sourceBet === undefined) {
+    return;
+  }
+
+  const nowText = new Date().toISOString();
+  const copiedBet = Object.assign({}, normalizeBet(sourceBet), {
+    id: createUniqueId(createUsedIdSet(bets)),
+    status: "未確定",
+    payout: 0,
+    createdAt: nowText,
+    updatedAt: nowText
+  });
+
+  bets.push(copiedBet);
   saveBets();
   renderBets();
 }
@@ -329,6 +447,7 @@ function updateBetStatus(id, status) {
   }
 
   bet.status = normalizeStatus(status);
+  bet.updatedAt = new Date().toISOString();
 
   if (bet.status !== "的中") {
     bet.payout = 0;
@@ -346,6 +465,7 @@ function updateBetPayout(id, payout) {
   }
 
   bet.payout = Number(payout) || 0;
+  bet.updatedAt = new Date().toISOString();
   saveBets();
   updateSummary(getFilteredBets());
 }
@@ -399,6 +519,13 @@ function validateAndBuildCombination() {
     ticketTypeInput.setCustomValidity("券種を選択してください。");
     ticketTypeInput.reportValidity();
     return "";
+  }
+
+  // 古いデータなどで馬番欄へ分解できない買い目は、編集時だけ既存文字列を維持します。
+  if (editingBetId !== null && betNumbersInput.value !== "" && values.every(function (value) {
+    return value === "";
+  })) {
+    return betNumbersInput.value;
   }
 
   const emptyIndex = values.findIndex(function (value) {
@@ -463,9 +590,121 @@ function clearBetNumbersError() {
   });
 }
 
+function createBetValuesFromForm(combination) {
+  const status = normalizeStatus(statusInput.value);
+  const payout = status === "的中" ? Number(payoutInput.value) || 0 : 0;
+
+  return {
+    date: dateInput.value,
+    place: placeInput.value.trim(),
+    race: raceInput.value.trim(),
+    ticketType: ticketTypeInput.value,
+    betNumbers: combination,
+    amount: Number(amountInput.value),
+    status: editingBetId === null ? "未確定" : status,
+    payout: editingBetId === null ? 0 : payout,
+    memo: memoInput.value.trim(),
+    tags: parseTags(tagsInput.value)
+  };
+}
+
+function parseTags(text) {
+  return text
+    .split(",")
+    .map(function (tag) {
+      return tag.trim();
+    })
+    .filter(function (tag) {
+      return tag !== "";
+    });
+}
+
+function confirmAmountIfNeeded() {
+  const amount = Number(amountInput.value);
+
+  if (amount >= 100 && amount % 100 === 0) {
+    return true;
+  }
+
+  return window.confirm("購入金額は通常100円単位です。入力した金額のまま保存しますか？");
+}
+
+function fillHorseNumberInputs(bet) {
+  const inputs = Array.from(horseNumberFields.querySelectorAll(".horse-number-input"));
+  const numbers = parseBetNumbersForInputs(bet.ticketType, bet.betNumbers);
+
+  if (numbers.length !== inputs.length) {
+    betNumbersInput.value = bet.betNumbers || "";
+    return;
+  }
+
+  inputs.forEach(function (input, index) {
+    input.value = numbers[index];
+  });
+}
+
+function parseBetNumbersForInputs(ticketType, betNumbers) {
+  const text = String(betNumbers || "");
+  const numbers = text.match(/\d+/g) || [];
+  const labels = TICKET_TYPE_FIELDS[ticketType] || [];
+
+  if (numbers.length !== labels.length) {
+    return [];
+  }
+
+  return numbers;
+}
+
+function setFormModeNew() {
+  editingBetId = null;
+  submitButton.textContent = "登録する";
+  cancelEditButton.style.display = "none";
+  editOnlyFields.style.display = "none";
+  editMessage.textContent = "";
+  statusInput.value = "未確定";
+  payoutInput.value = 0;
+  updateFormPayoutState();
+}
+
+function setFormModeEdit(bet) {
+  submitButton.textContent = "編集を保存";
+  cancelEditButton.style.display = "inline-block";
+  editOnlyFields.style.display = "grid";
+  editMessage.textContent = "編集中：" + (bet.date || "") + " " + (bet.place || "") + " " + (bet.race || "");
+}
+
+function ensureSelectHasOption(select, value) {
+  if (!value) {
+    return;
+  }
+
+  const exists = Array.from(select.options).some(function (option) {
+    return option.value === value;
+  });
+
+  if (exists) {
+    return;
+  }
+
+  const option = document.createElement("option");
+  option.value = value;
+  option.textContent = value;
+  select.appendChild(option);
+}
+
+function updateFormPayoutState() {
+  const canEditPayout = statusInput.value === "的中";
+
+  payoutInput.disabled = !canEditPayout;
+
+  if (!canEditPayout) {
+    payoutInput.value = 0;
+  }
+}
+
 function findBet(id) {
   return bets.find(function (bet) {
-    return bet.id === id;
+    return String(bet.id) === String(id);
   });
 }
 
@@ -607,7 +846,10 @@ function createCsvText(targetBets) {
     "status",
     "payout",
     "profit",
-    "memo"
+    "memo",
+    "tags",
+    "createdAt",
+    "updatedAt"
   ];
 
   const rows = targetBets.map(function (bet) {
@@ -624,7 +866,10 @@ function createCsvText(targetBets) {
       bet.status,
       payout,
       payout - amount,
-      bet.memo
+      bet.memo,
+      bet.tags.join(", "),
+      bet.createdAt,
+      bet.updatedAt
     ];
   });
 
@@ -862,6 +1107,7 @@ function resetForm() {
   betForm.reset();
   setToday();
   renderHorseNumberInputs();
+  setFormModeNew();
   placeInput.focus();
 }
 
@@ -908,6 +1154,36 @@ function formatSignedYen(number) {
   }
 
   return formatYen(number);
+}
+
+function createTagsHtml(tags) {
+  if (!Array.isArray(tags) || tags.length === 0) {
+    return "なし";
+  }
+
+  return tags.map(function (tag) {
+    return '<span class="tag-chip">' + escapeHtml(tag) + "</span>";
+  }).join("");
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return year + "-" + month + "-" + day + " " + hours + ":" + minutes;
 }
 
 // 画面に文字を表示するとき、HTMLとして解釈されないようにします。
