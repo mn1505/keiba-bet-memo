@@ -14,6 +14,7 @@ const emptyMessage = document.getElementById("empty-message");
 const totalAmount = document.getElementById("total-amount");
 const totalPayout = document.getElementById("total-payout");
 const profitLoss = document.getElementById("profit-loss");
+const recoveryRate = document.getElementById("recovery-rate");
 const betCount = document.getElementById("bet-count");
 
 let bets = loadBets();
@@ -32,7 +33,7 @@ betForm.addEventListener("submit", function (event) {
     ticketType: ticketTypeInput.value,
     betNumbers: betNumbersInput.value.trim(),
     amount: Number(amountInput.value),
-    result: "未確定",
+    status: "未確定",
     payout: 0,
     memo: memoInput.value.trim()
   };
@@ -55,12 +56,12 @@ betList.addEventListener("click", function (event) {
 
 // 的中/不的中や払戻金を変えたら、その場で保存します。
 betList.addEventListener("change", function (event) {
-  if (!event.target.classList.contains("result-select")) {
+  if (!event.target.classList.contains("status-select")) {
     return;
   }
 
   const id = Number(event.target.dataset.id);
-  updateBetResult(id, event.target.value);
+  updateBetStatus(id, event.target.value);
 });
 
 betList.addEventListener("input", function (event) {
@@ -79,11 +80,19 @@ function loadBets() {
     return [];
   }
 
-  const parsedBets = JSON.parse(savedBets);
+  try {
+    const parsedBets = JSON.parse(savedBets);
 
-  return parsedBets.map(function (bet) {
-    return normalizeBet(bet);
-  });
+    if (!Array.isArray(parsedBets)) {
+      return [];
+    }
+
+    return parsedBets.map(function (bet) {
+      return normalizeBet(bet);
+    });
+  } catch (error) {
+    return [];
+  }
 }
 
 function saveBets() {
@@ -136,10 +145,10 @@ function createBetCard(bet) {
       <div>
         <dt>結果</dt>
         <dd>
-          <select class="result-select" data-id="${bet.id}" aria-label="結果">
-            <option value="未確定"${bet.result === "未確定" ? " selected" : ""}>未確定</option>
-            <option value="的中"${bet.result === "的中" ? " selected" : ""}>的中</option>
-            <option value="不的中"${bet.result === "不的中" ? " selected" : ""}>不的中</option>
+          <select class="status-select" data-id="${bet.id}" aria-label="結果ステータス">
+            <option value="未確定"${bet.status === "未確定" ? " selected" : ""}>未確定</option>
+            <option value="的中"${bet.status === "的中" ? " selected" : ""}>的中</option>
+            <option value="不的中"${bet.status === "不的中" ? " selected" : ""}>不的中</option>
           </select>
         </dd>
       </div>
@@ -153,7 +162,7 @@ function createBetCard(bet) {
             min="0"
             step="10"
             value="${bet.payout}"
-            ${bet.result === "的中" ? "" : "disabled"}
+            ${bet.status === "的中" ? "" : "disabled"}
             aria-label="払戻金"
           >
         </dd>
@@ -169,6 +178,11 @@ function createBetCard(bet) {
 }
 
 function normalizeBet(bet) {
+  bet = bet || {};
+
+  // v1の保存データにはstatus/payoutがないため、ここでv2の形にそろえます。
+  const status = bet.status || bet.result || "未確定";
+
   return {
     id: bet.id,
     date: bet.date,
@@ -177,10 +191,18 @@ function normalizeBet(bet) {
     ticketType: bet.ticketType,
     betNumbers: bet.betNumbers,
     amount: Number(bet.amount) || 0,
-    result: bet.result || "未確定",
+    status: normalizeStatus(status),
     payout: Number(bet.payout) || 0,
     memo: bet.memo || ""
   };
+}
+
+function normalizeStatus(status) {
+  if (status === "的中" || status === "不的中" || status === "未確定") {
+    return status;
+  }
+
+  return "未確定";
 }
 
 function deleteBet(id) {
@@ -192,16 +214,16 @@ function deleteBet(id) {
   renderBets();
 }
 
-function updateBetResult(id, result) {
+function updateBetStatus(id, status) {
   const bet = findBet(id);
 
   if (bet === undefined) {
     return;
   }
 
-  bet.result = result;
+  bet.status = normalizeStatus(status);
 
-  if (result !== "的中") {
+  if (bet.status !== "的中") {
     bet.payout = 0;
   }
 
@@ -237,11 +259,13 @@ function updateSummary() {
   }, 0);
 
   const balance = payoutSum - amountSum;
+  const recoveryRateValue = amountSum === 0 ? 0 : (payoutSum / amountSum) * 100;
 
   totalAmount.textContent = formatYen(amountSum);
   totalPayout.textContent = formatYen(payoutSum);
   profitLoss.textContent = formatSignedYen(balance);
   profitLoss.className = balance >= 0 ? "plus" : "minus";
+  recoveryRate.textContent = recoveryRateValue.toFixed(1);
   betCount.textContent = bets.length + "件";
 }
 
