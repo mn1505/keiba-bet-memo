@@ -127,13 +127,33 @@ textarea {
   color: #647064;
 }
 
-.total-amount {
-  padding: 8px 12px;
+.summary-box {
+  display: grid;
+  gap: 4px;
+  min-width: 190px;
+  padding: 10px 12px;
   border-radius: 6px;
   color: #163b2a;
   background: #e5f2e9;
   font-weight: 700;
+}
+
+.summary-box p {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.summary-box span {
   white-space: nowrap;
+}
+
+.plus {
+  color: #14643f;
+}
+
+.minus {
+  color: #b23b3b;
 }
 
 .empty-message {
@@ -196,6 +216,17 @@ textarea {
   margin: 0;
   font-weight: 700;
   overflow-wrap: anywhere;
+}
+
+.bet-details select,
+.bet-details input {
+  min-height: 42px;
+  padding: 8px 10px;
+}
+
+.payout-input:disabled {
+  color: #657065;
+  background: #eef2ec;
 }
 
 .bet-memo {
@@ -266,8 +297,8 @@ textarea {
     gap: 10px;
   }
 
-  .total-amount {
-    width: fit-content;
+  .summary-box {
+    width: 100%;
   }
 
   .bet-card-header {

@@ -12,6 +12,8 @@ const memoInput = document.getElementById("memo");
 const betList = document.getElementById("bet-list");
 const emptyMessage = document.getElementById("empty-message");
 const totalAmount = document.getElementById("total-amount");
+const totalPayout = document.getElementById("total-payout");
+const profitLoss = document.getElementById("profit-loss");
 const betCount = document.getElementById("bet-count");
 
 let bets = loadBets();
@@ -30,6 +32,8 @@ betForm.addEventListener("submit", function (event) {
     ticketType: ticketTypeInput.value,
     betNumbers: betNumbersInput.value.trim(),
     amount: Number(amountInput.value),
+    result: "未確定",
+    payout: 0,
     memo: memoInput.value.trim()
   };
 
@@ -49,6 +53,25 @@ betList.addEventListener("click", function (event) {
   deleteBet(id);
 });
 
+// 的中/不的中や払戻金を変えたら、その場で保存します。
+betList.addEventListener("change", function (event) {
+  if (!event.target.classList.contains("result-select")) {
+    return;
+  }
+
+  const id = Number(event.target.dataset.id);
+  updateBetResult(id, event.target.value);
+});
+
+betList.addEventListener("input", function (event) {
+  if (!event.target.classList.contains("payout-input")) {
+    return;
+  }
+
+  const id = Number(event.target.dataset.id);
+  updateBetPayout(id, event.target.value);
+});
+
 function loadBets() {
   const savedBets = localStorage.getItem(STORAGE_KEY);
 
@@ -56,7 +79,11 @@ function loadBets() {
     return [];
   }
 
-  return JSON.parse(savedBets);
+  const parsedBets = JSON.parse(savedBets);
+
+  return parsedBets.map(function (bet) {
+    return normalizeBet(bet);
+  });
 }
 
 function saveBets() {
@@ -106,6 +133,31 @@ function createBetCard(bet) {
         <dt>金額</dt>
         <dd>${formatYen(bet.amount)}円</dd>
       </div>
+      <div>
+        <dt>結果</dt>
+        <dd>
+          <select class="result-select" data-id="${bet.id}" aria-label="結果">
+            <option value="未確定"${bet.result === "未確定" ? " selected" : ""}>未確定</option>
+            <option value="的中"${bet.result === "的中" ? " selected" : ""}>的中</option>
+            <option value="不的中"${bet.result === "不的中" ? " selected" : ""}>不的中</option>
+          </select>
+        </dd>
+      </div>
+      <div>
+        <dt>払戻金</dt>
+        <dd>
+          <input
+            type="number"
+            class="payout-input"
+            data-id="${bet.id}"
+            min="0"
+            step="10"
+            value="${bet.payout}"
+            ${bet.result === "的中" ? "" : "disabled"}
+            aria-label="払戻金"
+          >
+        </dd>
+      </div>
       <div class="bet-memo">
         <dt>メモ</dt>
         <dd>${escapeHtml(bet.memo || "なし")}</dd>
@@ -114,6 +166,21 @@ function createBetCard(bet) {
   `;
 
   return card;
+}
+
+function normalizeBet(bet) {
+  return {
+    id: bet.id,
+    date: bet.date,
+    place: bet.place,
+    race: bet.race,
+    ticketType: bet.ticketType,
+    betNumbers: bet.betNumbers,
+    amount: Number(bet.amount) || 0,
+    result: bet.result || "未確定",
+    payout: Number(bet.payout) || 0,
+    memo: bet.memo || ""
+  };
 }
 
 function deleteBet(id) {
@@ -125,12 +192,56 @@ function deleteBet(id) {
   renderBets();
 }
 
+function updateBetResult(id, result) {
+  const bet = findBet(id);
+
+  if (bet === undefined) {
+    return;
+  }
+
+  bet.result = result;
+
+  if (result !== "的中") {
+    bet.payout = 0;
+  }
+
+  saveBets();
+  renderBets();
+}
+
+function updateBetPayout(id, payout) {
+  const bet = findBet(id);
+
+  if (bet === undefined) {
+    return;
+  }
+
+  bet.payout = Number(payout) || 0;
+  saveBets();
+  updateSummary();
+}
+
+function findBet(id) {
+  return bets.find(function (bet) {
+    return bet.id === id;
+  });
+}
+
 function updateSummary() {
-  const sum = bets.reduce(function (total, bet) {
+  const amountSum = bets.reduce(function (total, bet) {
     return total + bet.amount;
   }, 0);
 
-  totalAmount.textContent = formatYen(sum);
+  const payoutSum = bets.reduce(function (total, bet) {
+    return total + bet.payout;
+  }, 0);
+
+  const balance = payoutSum - amountSum;
+
+  totalAmount.textContent = formatYen(amountSum);
+  totalPayout.textContent = formatYen(payoutSum);
+  profitLoss.textContent = formatSignedYen(balance);
+  profitLoss.className = balance >= 0 ? "plus" : "minus";
   betCount.textContent = bets.length + "件";
 }
 
@@ -152,6 +263,14 @@ function setToday() {
 
 function formatYen(number) {
   return number.toLocaleString("ja-JP");
+}
+
+function formatSignedYen(number) {
+  if (number > 0) {
+    return "+" + formatYen(number);
+  }
+
+  return formatYen(number);
 }
 
 // 画面に文字を表示するとき、HTMLとして解釈されないようにします。

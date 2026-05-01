@@ -1,4 +1,4 @@
-const CACHE_NAME = "kaime-memo-v1";
+const CACHE_NAME = "kaime-memo-v2";
 
 const CACHE_FILES = [
   "./",
