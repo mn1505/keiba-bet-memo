@@ -20,6 +20,60 @@
   </header>
 
   <main class="app-layout">
+    <section class="simulation-section" aria-labelledby="simulation-title">
+      <div class="section-title-row">
+        <div>
+          <h2 id="simulation-title">架空資金シミュレーション</h2>
+          <p>これは架空資金によるシミュレーションです。実際の馬券購入機能はありません。</p>
+        </div>
+      </div>
+
+      <div class="simulation-grid" aria-label="シミュレーション集計">
+        <div>
+          <span>初期資金</span>
+          <strong><span id="simulation-initial-fund">100,000</span>円</strong>
+        </div>
+        <div>
+          <span>現在残高</span>
+          <strong><span id="simulation-current-balance">100,000</span>円</strong>
+        </div>
+        <div>
+          <span>合計購入金額</span>
+          <strong><span id="simulation-total-amount">0</span>円</strong>
+        </div>
+        <div>
+          <span>合計払戻金</span>
+          <strong><span id="simulation-total-payout">0</span>円</strong>
+        </div>
+        <div>
+          <span>収支</span>
+          <strong><span id="simulation-profit-loss">0</span>円</strong>
+        </div>
+        <div>
+          <span>回収率</span>
+          <strong><span id="simulation-recovery-rate">0.0</span>%</strong>
+        </div>
+        <div>
+          <span>残高率</span>
+          <strong><span id="simulation-balance-rate">100.0</span>%</strong>
+        </div>
+      </div>
+
+      <p class="simulation-note">現在残高は全記録を基準に計算します。購入・送金・外部投票サイト連携はありません。</p>
+
+      <div class="fund-controls">
+        <label>
+          初期資金を再設定
+          <input type="number" id="initial-fund-input" min="0" step="1" value="100000">
+        </label>
+        <div class="fund-buttons">
+          <button type="button" id="save-initial-fund" class="secondary-button">初期資金だけ変更</button>
+          <button type="button" id="reset-all-data" class="delete-button">全記録削除して再設定</button>
+        </div>
+      </div>
+      <p id="simulation-message" class="simulation-message" aria-live="polite"></p>
+    </section>
+
     <section class="form-section" aria-labelledby="form-title">
       <h2 id="form-title">購入記録を登録</h2>
 

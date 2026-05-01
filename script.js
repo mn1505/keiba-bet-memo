@@ -1,6 +1,9 @@
 const STORAGE_KEY = "keibaBetMemoList";
+const SIMULATION_STORAGE_KEY = "keibaBetMemoSimulationSettings";
 const APP_NAME = "keiba-bet-memo";
-const APP_VERSION = "v7";
+const APP_VERSION = "v8";
+const DEFAULT_INITIAL_FUND = 100000;
+const RACE_OPTIONS = ["1R", "2R", "3R", "4R", "5R", "6R", "7R", "8R", "9R", "10R", "11R", "12R"];
 const TICKET_TYPES = ["単勝", "複勝", "ワイド", "馬連", "馬単", "三連複", "三連単"];
 const STATUS_TYPES = ["未確定", "的中", "不的中"];
 const TICKET_TYPE_FIELDS = {
@@ -31,6 +34,17 @@ const editOnlyFields = document.getElementById("edit-only-fields");
 const editMessage = document.getElementById("edit-message");
 const submitButton = document.getElementById("submit-button");
 const cancelEditButton = document.getElementById("cancel-edit");
+const simulationInitialFund = document.getElementById("simulation-initial-fund");
+const simulationCurrentBalance = document.getElementById("simulation-current-balance");
+const simulationTotalAmount = document.getElementById("simulation-total-amount");
+const simulationTotalPayout = document.getElementById("simulation-total-payout");
+const simulationProfitLoss = document.getElementById("simulation-profit-loss");
+const simulationRecoveryRate = document.getElementById("simulation-recovery-rate");
+const simulationBalanceRate = document.getElementById("simulation-balance-rate");
+const initialFundInput = document.getElementById("initial-fund-input");
+const saveInitialFundButton = document.getElementById("save-initial-fund");
+const resetAllDataButton = document.getElementById("reset-all-data");
+const simulationMessage = document.getElementById("simulation-message");
 
 const betList = document.getElementById("bet-list");
 const emptyMessage = document.getElementById("empty-message");
@@ -54,6 +68,7 @@ const restoreBackupButton = document.getElementById("restore-backup");
 const backupMessage = document.getElementById("backup-message");
 
 let bets = loadBets();
+let simulationSettings = loadSimulationSettings();
 let editingBetId = null;
 
 setToday();
@@ -90,6 +105,15 @@ betForm.addEventListener("submit", function (event) {
   const nowText = new Date().toISOString();
   const formValues = createBetValuesFromForm(combination);
 
+  const projectedBalance = calculateProjectedBalance(formValues, editingBetId);
+
+  if (projectedBalance < 0) {
+    const shortage = Math.abs(projectedBalance);
+    showSimulationMessage("現在残高が不足しています。保存すると残高が" + formatYen(shortage) + "円不足します。", true);
+    amountInput.focus();
+    return;
+  }
+
   if (editingBetId === null) {
     const bet = Object.assign({}, formValues, {
       id: createUniqueId(createUsedIdSet(bets)),
@@ -115,6 +139,7 @@ betForm.addEventListener("submit", function (event) {
   }
 
   saveBets();
+  showSimulationMessage("現在残高を全記録から再計算しました。", false);
   renderBets();
   resetForm();
 });
@@ -138,6 +163,8 @@ restoreBackupButton.addEventListener("click", restoreBackupJson);
 ticketTypeInput.addEventListener("change", renderHorseNumberInputs);
 statusInput.addEventListener("change", updateFormPayoutState);
 cancelEditButton.addEventListener("click", resetForm);
+saveInitialFundButton.addEventListener("click", saveInitialFundOnly);
+resetAllDataButton.addEventListener("click", resetAllDataAndInitialFund);
 
 placeInput.addEventListener("change", function () {
   placeInput.setCustomValidity("");
@@ -221,6 +248,40 @@ function saveBets() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(bets));
 }
 
+function loadSimulationSettings() {
+  const savedSettings = localStorage.getItem(SIMULATION_STORAGE_KEY);
+
+  if (savedSettings === null) {
+    return createDefaultSimulationSettings();
+  }
+
+  try {
+    return normalizeSimulationSettings(JSON.parse(savedSettings));
+  } catch (error) {
+    return createDefaultSimulationSettings();
+  }
+}
+
+function saveSimulationSettings() {
+  localStorage.setItem(SIMULATION_STORAGE_KEY, JSON.stringify(simulationSettings));
+}
+
+function createDefaultSimulationSettings() {
+  return {
+    mode: "simulation",
+    initialFund: DEFAULT_INITIAL_FUND
+  };
+}
+
+function normalizeSimulationSettings(settings) {
+  const initialFund = Number(settings && settings.initialFund);
+
+  return {
+    mode: "simulation",
+    initialFund: Number.isFinite(initialFund) && initialFund >= 0 ? Math.floor(initialFund) : DEFAULT_INITIAL_FUND
+  };
+}
+
 function renderBets() {
   updatePlaceFilterOptions();
   clearCsvMessage();
@@ -245,6 +306,7 @@ function renderBets() {
   });
 
   updateSummary(filteredBets);
+  updateSimulationSummary();
 }
 
 function createBetCard(bet) {
@@ -401,10 +463,9 @@ function startEditBet(id) {
   editingBetId = id;
   dateInput.value = bet.date || getTodayText();
   ensureSelectHasOption(placeInput, bet.place);
-  ensureSelectHasOption(raceInput, bet.race);
   ensureSelectHasOption(ticketTypeInput, bet.ticketType);
   placeInput.value = bet.place || "";
-  raceInput.value = bet.race || "";
+  raceInput.value = normalizeRaceNumber(bet.race);
   ticketTypeInput.value = bet.ticketType || "";
   renderHorseNumberInputs();
   fillHorseNumberInputs(bet);
@@ -425,9 +486,20 @@ function duplicateBet(id) {
     return;
   }
 
+  const projectedBalance = calculateProjectedBalance({
+    amount: sourceBet.amount,
+    payout: 0
+  }, null);
+
+  if (projectedBalance < 0) {
+    showSimulationMessage("現在残高が不足しているため複製できません。保存すると残高が" + formatYen(Math.abs(projectedBalance)) + "円不足します。", true);
+    return;
+  }
+
   const nowText = new Date().toISOString();
   const copiedBet = Object.assign({}, normalizeBet(sourceBet), {
     id: createUniqueId(createUsedIdSet(bets)),
+    race: normalizeRaceNumber(sourceBet.race) || sourceBet.race,
     status: "未確定",
     payout: 0,
     createdAt: nowText,
@@ -468,6 +540,7 @@ function updateBetPayout(id, payout) {
   bet.updatedAt = new Date().toISOString();
   saveBets();
   updateSummary(getFilteredBets());
+  updateSimulationSummary();
 }
 
 function renderHorseNumberInputs() {
@@ -597,7 +670,7 @@ function createBetValuesFromForm(combination) {
   return {
     date: dateInput.value,
     place: placeInput.value.trim(),
-    race: raceInput.value.trim(),
+    race: normalizeRaceNumber(raceInput.value),
     ticketType: ticketTypeInput.value,
     betNumbers: combination,
     amount: Number(amountInput.value),
@@ -627,6 +700,28 @@ function confirmAmountIfNeeded() {
   }
 
   return window.confirm("購入金額は通常100円単位です。入力した金額のまま保存しますか？");
+}
+
+function calculateProjectedBalance(formValues, editingId) {
+  const summary = calculateSimulationSummary(null);
+  const nextAmount = Number(formValues.amount) || 0;
+  const nextPayout = Number(formValues.payout) || 0;
+
+  if (editingId === null) {
+    return summary.currentBalance - nextAmount + nextPayout;
+  }
+
+  const currentBet = findBet(editingId);
+
+  if (currentBet === undefined) {
+    return summary.currentBalance - nextAmount + nextPayout;
+  }
+
+  return summary.currentBalance
+    + (Number(currentBet.amount) || 0)
+    - (Number(currentBet.payout) || 0)
+    - nextAmount
+    + nextPayout;
 }
 
 function fillHorseNumberInputs(bet) {
@@ -692,6 +787,23 @@ function ensureSelectHasOption(select, value) {
   select.appendChild(option);
 }
 
+function normalizeRaceNumber(value) {
+  const text = String(value || "").trim();
+  const match = text.match(/(1[0-2]|[1-9])R$/);
+
+  if (match === null) {
+    return "";
+  }
+
+  const raceNumber = Number(match[1]);
+
+  if (!RACE_OPTIONS.includes(raceNumber + "R")) {
+    return "";
+  }
+
+  return raceNumber + "R";
+}
+
 function updateFormPayoutState() {
   const canEditPayout = statusInput.value === "的中";
 
@@ -729,6 +841,7 @@ function exportBackupJson() {
     version: APP_VERSION,
     exportedAt: new Date().toISOString(),
     data: {
+      simulation: normalizeSimulationSettings(simulationSettings),
       bets: bets.map(function (bet) {
         return normalizeBet(bet);
       })
@@ -763,19 +876,22 @@ function restoreBackupJson() {
 
   reader.addEventListener("load", function () {
     try {
-      const importedBets = parseBackupJson(reader.result);
+      const importedBackup = parseBackupJson(reader.result);
+      const importedBets = importedBackup.bets;
       const usedIds = createUsedIdSet(mode === "append" ? bets : []);
       const restoredBets = importedBets.map(function (bet) {
         return normalizeImportedBet(bet, usedIds);
       });
 
       bets = mode === "append" ? bets.concat(restoredBets) : restoredBets;
+      simulationSettings = importedBackup.simulation;
       saveBets();
+      saveSimulationSettings();
       renderBets();
       restoreFileInput.value = "";
 
       const actionText = mode === "append" ? "追加" : "置き換え";
-      showBackupMessage(restoredBets.length + "件のデータを" + actionText + "復元しました。", false);
+      showBackupMessage(restoredBets.length + "件のデータを" + actionText + "復元し、初期資金も復元しました。", false);
     } catch (error) {
       showBackupMessage(error.message, true);
     }
@@ -809,7 +925,10 @@ function parseBackupJson(jsonText) {
 
   validateBackupBets(backupBets);
 
-  return backupBets;
+  return {
+    bets: backupBets,
+    simulation: getBackupSimulationSettings(parsedBackup)
+  };
 }
 
 function getBackupBets(parsedBackup) {
@@ -823,6 +942,24 @@ function getBackupBets(parsedBackup) {
   }
 
   return null;
+}
+
+function getBackupSimulationSettings(parsedBackup) {
+  if (parsedBackup.data && parsedBackup.data.simulation) {
+    return normalizeSimulationSettings(parsedBackup.data.simulation);
+  }
+
+  if (parsedBackup.data && parsedBackup.data.initialFund !== undefined) {
+    return normalizeSimulationSettings({
+      initialFund: parsedBackup.data.initialFund
+    });
+  }
+
+  if (parsedBackup.simulation) {
+    return normalizeSimulationSettings(parsedBackup.simulation);
+  }
+
+  return createDefaultSimulationSettings();
 }
 
 function validateBackupBets(backupBets) {
@@ -950,6 +1087,103 @@ function clearCsvMessage() {
 function showBackupMessage(message, isError) {
   backupMessage.textContent = message;
   backupMessage.classList.toggle("is-error", isError);
+}
+
+function saveInitialFundOnly() {
+  const nextInitialFund = getInitialFundInputValue();
+
+  if (nextInitialFund === null) {
+    return;
+  }
+
+  if (!window.confirm("購入記録を残したまま、初期資金だけ変更します。実行しますか？")) {
+    return;
+  }
+
+  simulationSettings.initialFund = nextInitialFund;
+  saveSimulationSettings();
+  updateSimulationSummary();
+  showSimulationMessage("初期資金を" + formatYen(nextInitialFund) + "円に変更しました。", false);
+}
+
+function resetAllDataAndInitialFund() {
+  const nextInitialFund = getInitialFundInputValue();
+
+  if (nextInitialFund === null) {
+    return;
+  }
+
+  if (!window.confirm("全購入記録を削除し、初期資金を再設定します。この操作は元に戻せません。実行しますか？")) {
+    return;
+  }
+
+  bets = [];
+  simulationSettings.initialFund = nextInitialFund;
+  saveBets();
+  saveSimulationSettings();
+  resetForm();
+  renderBets();
+  showSimulationMessage("全購入記録を削除し、初期資金を" + formatYen(nextInitialFund) + "円に再設定しました。", false);
+}
+
+function getInitialFundInputValue() {
+  const value = Number(initialFundInput.value);
+
+  if (!Number.isFinite(value) || value < 0) {
+    showSimulationMessage("初期資金は0円以上の数字で入力してください。", true);
+    initialFundInput.focus();
+    return null;
+  }
+
+  return Math.floor(value);
+}
+
+function updateSimulationSummary() {
+  const summary = calculateSimulationSummary(null);
+  const balanceClass = summary.currentBalance >= summary.initialFund ? "plus" : "minus";
+  const profitLossClass = summary.profitLoss >= 0 ? "plus" : "minus";
+
+  initialFundInput.value = summary.initialFund;
+  simulationInitialFund.textContent = formatYen(summary.initialFund);
+  simulationCurrentBalance.textContent = formatYen(summary.currentBalance);
+  simulationCurrentBalance.className = balanceClass;
+  simulationTotalAmount.textContent = formatYen(summary.amountSum);
+  simulationTotalPayout.textContent = formatYen(summary.payoutSum);
+  simulationProfitLoss.textContent = formatSignedYen(summary.profitLoss);
+  simulationProfitLoss.className = profitLossClass;
+  simulationRecoveryRate.textContent = summary.recoveryRate.toFixed(1);
+  simulationBalanceRate.textContent = summary.balanceRate.toFixed(1);
+}
+
+function calculateSimulationSummary(excludingBetId) {
+  const targetBets = bets.filter(function (bet) {
+    return excludingBetId === null || String(bet.id) !== String(excludingBetId);
+  });
+
+  const amountSum = targetBets.reduce(function (total, bet) {
+    return total + (Number(bet.amount) || 0);
+  }, 0);
+  const payoutSum = targetBets.reduce(function (total, bet) {
+    return total + (Number(bet.payout) || 0);
+  }, 0);
+  const initialFund = Number(simulationSettings.initialFund) || 0;
+  const profitLoss = payoutSum - amountSum;
+  const currentBalance = initialFund + profitLoss;
+
+  return {
+    initialFund: initialFund,
+    amountSum: amountSum,
+    payoutSum: payoutSum,
+    profitLoss: profitLoss,
+    currentBalance: currentBalance,
+    recoveryRate: amountSum === 0 ? 0 : (payoutSum / amountSum) * 100,
+    balanceRate: initialFund === 0 ? 0 : (currentBalance / initialFund) * 100
+  };
+}
+
+function showSimulationMessage(message, isError) {
+  simulationMessage.textContent = message;
+  simulationMessage.classList.toggle("is-error", isError);
 }
 
 function getFilteredBets() {

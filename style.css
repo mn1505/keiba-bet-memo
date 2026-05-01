@@ -38,6 +38,7 @@ body {
   margin: 24px auto;
 }
 
+.simulation-section,
 .form-section,
 .list-section {
   padding: 20px;
@@ -46,9 +47,93 @@ body {
   background: #ffffff;
 }
 
+.simulation-section {
+  grid-column: 1 / -1;
+}
+
 h2 {
   margin: 0 0 16px;
   font-size: 20px;
+}
+
+.section-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.section-title-row h2 {
+  margin-bottom: 4px;
+}
+
+.section-title-row p,
+.simulation-note {
+  margin: 0;
+  color: #4b5565;
+  font-weight: 700;
+}
+
+.simulation-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.simulation-grid div {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #d6dde8;
+  border-radius: 4px;
+  background: #f8fafc;
+}
+
+.simulation-grid strong {
+  display: block;
+}
+
+.simulation-grid div > span {
+  color: #657285;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.simulation-grid strong {
+  margin-top: 4px;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.simulation-note {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.fund-controls {
+  display: grid;
+  grid-template-columns: minmax(180px, 280px) 1fr;
+  gap: 12px;
+  align-items: end;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #d6dde8;
+}
+
+.fund-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.simulation-message {
+  min-height: 24px;
+  margin: 10px 0 0;
+  color: #1c4f82;
+  font-weight: 700;
+}
+
+.simulation-message.is-error {
+  color: #b23b3b;
 }
 
 form {
@@ -585,6 +670,7 @@ textarea {
     margin: 0 auto;
   }
 
+  .simulation-section,
   .form-section,
   .list-section {
     padding: 18px max(16px, env(safe-area-inset-right)) 20px max(16px, env(safe-area-inset-left));
@@ -594,6 +680,23 @@ textarea {
 
   h2 {
     font-size: 18px;
+  }
+
+  .section-title-row {
+    display: grid;
+  }
+
+  .simulation-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .simulation-grid strong {
+    font-size: 16px;
+  }
+
+  .fund-controls,
+  .fund-buttons {
+    grid-template-columns: 1fr;
   }
 
   form {
@@ -692,10 +795,15 @@ textarea {
     font-size: 22px;
   }
 
+  .simulation-section,
   .form-section,
   .list-section {
     padding-right: 12px;
     padding-left: 12px;
+  }
+
+  .simulation-grid {
+    grid-template-columns: 1fr;
   }
 
   .filter-grid {
