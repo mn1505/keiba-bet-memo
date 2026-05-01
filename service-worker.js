@@ -1,4 +1,4 @@
-const CACHE_NAME = "kaime-memo-v7-ui-selects";
+const CACHE_NAME = "keiba-purchase-record-v8";
 
 const CACHE_FILES = [
   "./",

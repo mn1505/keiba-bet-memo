@@ -1,8 +1,18 @@
 const STORAGE_KEY = "keibaBetMemoList";
 const APP_NAME = "keiba-bet-memo";
-const APP_VERSION = "v7";
+const APP_VERSION = "v8";
 const TICKET_TYPES = ["単勝", "複勝", "ワイド", "馬連", "馬単", "三連複", "三連単"];
 const STATUS_TYPES = ["未確定", "的中", "不的中"];
+const TICKET_TYPE_FIELDS = {
+  "単勝": ["馬番"],
+  "複勝": ["馬番"],
+  "ワイド": ["1頭目", "2頭目"],
+  "馬連": ["1頭目", "2頭目"],
+  "馬単": ["1着", "2着"],
+  "三連複": ["1頭目", "2頭目", "3頭目"],
+  "三連単": ["1着", "2着", "3着"]
+};
+const ORDERLESS_TICKET_TYPES = ["ワイド", "馬連", "三連複"];
 
 const betForm = document.getElementById("bet-form");
 const dateInput = document.getElementById("date");
@@ -10,6 +20,8 @@ const placeInput = document.getElementById("place");
 const raceInput = document.getElementById("race");
 const ticketTypeInput = document.getElementById("ticket-type");
 const betNumbersInput = document.getElementById("bet-numbers");
+const horseNumberFields = document.getElementById("horse-number-fields");
+const betNumbersError = document.getElementById("bet-numbers-error");
 const amountInput = document.getElementById("amount");
 const memoInput = document.getElementById("memo");
 
@@ -38,6 +50,7 @@ let bets = loadBets();
 
 setToday();
 setSelectValidationMessages();
+renderHorseNumberInputs();
 renderBets();
 
 betForm.addEventListener("submit", function (event) {
@@ -55,13 +68,19 @@ betForm.addEventListener("submit", function (event) {
     return;
   }
 
+  const combination = validateAndBuildCombination();
+
+  if (combination === "") {
+    return;
+  }
+
   const bet = {
     id: Date.now(),
     date: dateInput.value,
     place: placeInput.value.trim(),
     race: raceInput.value.trim(),
     ticketType: ticketTypeInput.value,
-    betNumbers: betNumbersInput.value.trim(),
+    betNumbers: combination,
     amount: Number(amountInput.value),
     status: "未確定",
     payout: 0,
@@ -90,6 +109,7 @@ resetFiltersButton.addEventListener("click", function () {
 exportCsvButton.addEventListener("click", exportVisibleBetsToCsv);
 exportBackupButton.addEventListener("click", exportBackupJson);
 restoreBackupButton.addEventListener("click", restoreBackupJson);
+ticketTypeInput.addEventListener("change", renderHorseNumberInputs);
 
 placeInput.addEventListener("change", function () {
   placeInput.setCustomValidity("");
@@ -97,6 +117,18 @@ placeInput.addEventListener("change", function () {
 
 raceInput.addEventListener("change", function () {
   raceInput.setCustomValidity("");
+});
+
+ticketTypeInput.addEventListener("change", function () {
+  ticketTypeInput.setCustomValidity("");
+});
+
+horseNumberFields.addEventListener("input", function (event) {
+  if (!event.target.classList.contains("horse-number-input")) {
+    return;
+  }
+
+  clearBetNumbersError();
 });
 
 // 削除ボタンは一覧の中にあとから作るため、一覧全体でクリックを受け取ります。
@@ -163,10 +195,10 @@ function renderBets() {
   betList.innerHTML = "";
 
   if (bets.length === 0) {
-    emptyMessage.textContent = "まだ買い目が登録されていません。";
+    emptyMessage.textContent = "まだ購入記録が登録されていません。";
     emptyMessage.style.display = "block";
   } else if (filteredBets.length === 0) {
-    emptyMessage.textContent = "条件に合う買い目がありません。";
+    emptyMessage.textContent = "条件に合う購入記録がありません。";
     emptyMessage.style.display = "block";
   } else {
     emptyMessage.style.display = "none";
@@ -250,10 +282,10 @@ function normalizeBet(bet) {
   return {
     id: bet.id,
     date: bet.date,
-    place: bet.place,
+    place: bet.place || bet.track,
     race: bet.race,
-    ticketType: bet.ticketType,
-    betNumbers: bet.betNumbers,
+    ticketType: bet.ticketType || bet.betType,
+    betNumbers: bet.betNumbers || bet.combination || "",
     amount: Number(bet.amount) || 0,
     status: normalizeStatus(status),
     payout: Number(bet.payout) || 0,
@@ -318,6 +350,119 @@ function updateBetPayout(id, payout) {
   updateSummary(getFilteredBets());
 }
 
+function renderHorseNumberInputs() {
+  const ticketType = ticketTypeInput.value;
+  const labels = TICKET_TYPE_FIELDS[ticketType] || [];
+
+  horseNumberFields.innerHTML = "";
+  betNumbersInput.value = "";
+  clearBetNumbersError();
+
+  if (labels.length === 0) {
+    const message = document.createElement("p");
+    message.className = "horse-number-placeholder";
+    message.textContent = "券種を選ぶと必要な馬番入力欄が表示されます。";
+    horseNumberFields.appendChild(message);
+    return;
+  }
+
+  labels.forEach(function (labelText, index) {
+    const label = document.createElement("label");
+    const input = document.createElement("input");
+
+    input.type = "text";
+    input.className = "horse-number-input";
+    input.inputMode = "numeric";
+    input.autocomplete = "off";
+    input.setAttribute("list", "horse-number-options");
+    input.setAttribute("aria-label", labelText + "の馬番");
+    input.dataset.index = String(index);
+    input.placeholder = "1〜18";
+
+    label.textContent = labelText;
+    label.appendChild(input);
+    horseNumberFields.appendChild(label);
+  });
+}
+
+function validateAndBuildCombination() {
+  const ticketType = ticketTypeInput.value;
+  const labels = TICKET_TYPE_FIELDS[ticketType] || [];
+  const inputs = Array.from(horseNumberFields.querySelectorAll(".horse-number-input"));
+  const values = inputs.map(function (input) {
+    return input.value.trim();
+  });
+
+  clearBetNumbersError();
+
+  if (labels.length === 0) {
+    ticketTypeInput.setCustomValidity("券種を選択してください。");
+    ticketTypeInput.reportValidity();
+    return "";
+  }
+
+  const emptyIndex = values.findIndex(function (value) {
+    return value === "";
+  });
+
+  if (emptyIndex !== -1) {
+    return showBetNumbersError(inputs[emptyIndex], labels[emptyIndex] + "の馬番を選択してください。");
+  }
+
+  const invalidIndex = values.findIndex(function (value) {
+    return !isValidHorseNumber(value);
+  });
+
+  if (invalidIndex !== -1) {
+    return showBetNumbersError(inputs[invalidIndex], "馬番は1〜18の数字で入力してください。");
+  }
+
+  const normalizedValues = values.map(function (value) {
+    return String(Number(value));
+  });
+  const uniqueValues = new Set(normalizedValues);
+
+  if (uniqueValues.size !== values.length) {
+    return showBetNumbersError(inputs[0], "同じ購入記録内で同じ馬番は選べません。別の馬番を選択してください。");
+  }
+
+  const numbersForSave = ORDERLESS_TICKET_TYPES.includes(ticketType)
+    ? normalizedValues.slice().sort(function (a, b) {
+        return Number(a) - Number(b);
+      })
+    : normalizedValues;
+  const separator = ticketType === "馬単" || ticketType === "三連単" ? "→" : "-";
+  const combination = numbersForSave.join(separator);
+
+  betNumbersInput.value = combination;
+  return combination;
+}
+
+function isValidHorseNumber(value) {
+  if (!/^\d+$/.test(value)) {
+    return false;
+  }
+
+  const number = Number(value);
+  return number >= 1 && number <= 18;
+}
+
+function showBetNumbersError(input, message) {
+  betNumbersError.textContent = message;
+  input.setCustomValidity(message);
+  input.reportValidity();
+  input.setCustomValidity("");
+  return "";
+}
+
+function clearBetNumbersError() {
+  betNumbersError.textContent = "";
+
+  horseNumberFields.querySelectorAll(".horse-number-input").forEach(function (input) {
+    input.setCustomValidity("");
+  });
+}
+
 function findBet(id) {
   return bets.find(function (bet) {
     return bet.id === id;
@@ -329,7 +474,7 @@ function exportVisibleBetsToCsv() {
   const targetBets = getFilteredBets();
 
   if (targetBets.length === 0) {
-    showCsvMessage("CSV出力できる買い目がありません。絞り込み条件を変更してください。", true);
+    showCsvMessage("CSV出力できる購入記録がありません。絞り込み条件を変更してください。", true);
     return;
   }
 
@@ -420,7 +565,7 @@ function parseBackupJson(jsonText) {
   const backupBets = getBackupBets(parsedBackup);
 
   if (!Array.isArray(backupBets)) {
-    throw new Error("買い目データが見つかりません。v6のJSONバックアップを選んでください。");
+    throw new Error("購入記録データが見つかりません。v6以降のJSONバックアップを選んでください。");
   }
 
   validateBackupBets(backupBets);
@@ -447,7 +592,7 @@ function validateBackupBets(backupBets) {
   });
 
   if (hasInvalidBet) {
-    throw new Error("買い目データの形式が正しくありません。別のJSONバックアップを選んでください。");
+    throw new Error("購入記録データの形式が正しくありません。別のJSONバックアップを選んでください。");
   }
 }
 
@@ -716,6 +861,7 @@ function createTicketSummaryCard(summary) {
 function resetForm() {
   betForm.reset();
   setToday();
+  renderHorseNumberInputs();
   placeInput.focus();
 }
 
@@ -729,6 +875,12 @@ function setSelectValidationMessages() {
   raceInput.addEventListener("invalid", function () {
     if (!raceInput.value) {
       raceInput.setCustomValidity("レース番号を選択してください。");
+    }
+  });
+
+  ticketTypeInput.addEventListener("invalid", function () {
+    if (!ticketTypeInput.value) {
+      ticketTypeInput.setCustomValidity("券種を選択してください。");
     }
   });
 }

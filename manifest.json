@@ -1,7 +1,7 @@
 {
-  "name": "買い目メモ",
-  "short_name": "買い目メモ",
-  "description": "競馬の買い目をスマホに保存できるメモアプリです。",
+  "name": "購入記録",
+  "short_name": "購入記録",
+  "description": "競馬の購入記録をスマホに保存できるメモアプリです。",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

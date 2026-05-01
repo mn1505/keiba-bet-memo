@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#172033">
-  <meta name="description" content="競馬の買い目をスマホに保存できるメモアプリです。">
-  <title>買い目メモ</title>
+  <meta name="description" content="競馬の購入記録をスマホに保存できるメモアプリです。">
+  <title>購入記録</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon.svg">
@@ -14,14 +14,14 @@
 <body>
   <header class="app-header">
     <div>
-      <h1>買い目メモ</h1>
-      <p>購入予定・購入済みの買い目をローカルに記録できます。</p>
+      <h1>購入記録</h1>
+      <p>購入予定・購入済みの内容をローカルに記録できます。</p>
     </div>
   </header>
 
   <main class="app-layout">
     <section class="form-section" aria-labelledby="form-title">
-      <h2 id="form-title">買い目を登録</h2>
+      <h2 id="form-title">購入記録を登録</h2>
 
       <form id="bet-form">
         <div class="form-grid">
@@ -80,10 +80,32 @@
             </select>
           </label>
 
-          <label>
-            買い目
-            <input type="text" id="bet-numbers" placeholder="例：7、7-13、7→13" required>
-          </label>
+          <fieldset class="horse-number-section">
+            <legend>馬番</legend>
+            <div id="horse-number-fields" class="horse-number-fields"></div>
+            <input type="hidden" id="bet-numbers">
+            <datalist id="horse-number-options">
+              <option value="1"></option>
+              <option value="2"></option>
+              <option value="3"></option>
+              <option value="4"></option>
+              <option value="5"></option>
+              <option value="6"></option>
+              <option value="7"></option>
+              <option value="8"></option>
+              <option value="9"></option>
+              <option value="10"></option>
+              <option value="11"></option>
+              <option value="12"></option>
+              <option value="13"></option>
+              <option value="14"></option>
+              <option value="15"></option>
+              <option value="16"></option>
+              <option value="17"></option>
+              <option value="18"></option>
+            </datalist>
+            <p id="bet-numbers-error" class="form-error" aria-live="polite"></p>
+          </fieldset>
 
           <label>
             金額
@@ -103,7 +125,7 @@
     <section class="list-section" aria-labelledby="list-title">
       <div class="list-header">
         <div>
-          <h2 id="list-title">登録した買い目</h2>
+          <h2 id="list-title">登録した購入記録</h2>
           <p id="bet-count">0件</p>
         </div>
         <div class="list-actions">
@@ -117,31 +139,6 @@
         </div>
       </div>
       <p id="csv-message" class="csv-message" aria-live="polite"></p>
-
-      <section class="backup-section" aria-labelledby="backup-title">
-        <h2 id="backup-title">バックアップ/復元</h2>
-        <div class="backup-grid">
-          <button type="button" id="export-backup" class="backup-button">全データをJSONバックアップ</button>
-
-          <div class="restore-controls">
-            <label>
-              復元ファイル
-              <input type="file" id="restore-file" accept="application/json,.json">
-            </label>
-
-            <label>
-              復元方式
-              <select id="restore-mode">
-                <option value="replace">現在のデータを置き換える</option>
-                <option value="append">現在のデータに追加する</option>
-              </select>
-            </label>
-
-            <button type="button" id="restore-backup" class="secondary-button">JSONバックアップを復元</button>
-          </div>
-        </div>
-        <p id="backup-message" class="backup-message" aria-live="polite"></p>
-      </section>
 
       <section class="filter-section" aria-labelledby="filter-title">
         <div class="filter-header">
@@ -194,10 +191,35 @@
       </section>
 
       <div id="empty-message" class="empty-message">
-        まだ買い目が登録されていません。
+        まだ購入記録が登録されていません。
       </div>
 
       <div id="bet-list" class="bet-list"></div>
+
+      <section class="backup-section" aria-labelledby="backup-title">
+        <h2 id="backup-title">バックアップ/復元</h2>
+        <div class="backup-grid">
+          <button type="button" id="export-backup" class="backup-button">全データをJSONバックアップ</button>
+
+          <div class="restore-controls">
+            <label>
+              復元ファイル
+              <input type="file" id="restore-file" accept="application/json,.json">
+            </label>
+
+            <label>
+              復元方式
+              <select id="restore-mode">
+                <option value="replace">現在のデータを置き換える</option>
+                <option value="append">現在のデータに追加する</option>
+              </select>
+            </label>
+
+            <button type="button" id="restore-backup" class="secondary-button">JSONバックアップを復元</button>
+          </div>
+        </div>
+        <p id="backup-message" class="backup-message" aria-live="polite"></p>
+      </section>
     </section>
   </main>
 
