@@ -374,6 +374,38 @@
 
       <div id="bet-list" class="bet-list"></div>
 
+      <section class="result-import-section" aria-labelledby="result-import-title">
+        <div class="result-import-header">
+          <div>
+            <h2 id="result-import-title">結果データ取り込み</h2>
+            <p>results.json または CSV を手動で読み込み、登録済みの購入記録と照合します。</p>
+          </div>
+        </div>
+
+        <div class="result-import-controls">
+          <label>
+            結果データファイル
+            <input type="file" id="result-import-file" accept="application/json,.json,text/csv,.csv">
+          </label>
+          <div class="result-import-buttons">
+            <button type="button" id="read-result-import" class="secondary-button">プレビューを作成</button>
+            <button type="button" id="apply-result-import" class="primary-button" disabled>結果を反映</button>
+            <button type="button" id="mark-race-miss" class="secondary-button" disabled>対象レースの未確定を不的中にする</button>
+          </div>
+        </div>
+
+        <p id="result-import-message" class="result-import-message" aria-live="polite"></p>
+
+        <div id="result-import-preview" class="result-import-preview">
+          <p class="import-empty">結果データを読み込むと、ここにプレビューが表示されます。</p>
+        </div>
+
+        <section class="result-import-history" aria-labelledby="result-import-history-title">
+          <h3 id="result-import-history-title">直近の取り込み履歴</h3>
+          <div id="result-import-history-list" class="result-import-history-list"></div>
+        </section>
+      </section>
+
       <section class="backup-section" aria-labelledby="backup-title">
         <h2 id="backup-title">バックアップ/復元</h2>
         <div class="backup-grid">

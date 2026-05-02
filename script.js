@@ -1,11 +1,24 @@
 const STORAGE_KEY = "keibaBetMemoList";
 const SIMULATION_STORAGE_KEY = "keibaBetMemoSimulationSettings";
+const IMPORT_HISTORY_STORAGE_KEY = "keibaBetMemoResultImportHistory";
 const APP_NAME = "keiba-bet-memo";
-const APP_VERSION = "v9";
+const APP_VERSION = "v10";
 const DEFAULT_INITIAL_FUND = 100000;
 const RACE_OPTIONS = ["1R", "2R", "3R", "4R", "5R", "6R", "7R", "8R", "9R", "10R", "11R", "12R"];
 const TICKET_TYPES = ["単勝", "複勝", "ワイド", "馬連", "馬単", "三連複", "三連単"];
 const STATUS_TYPES = ["未確定", "的中", "不的中"];
+const TRACK_CODES = {
+  "札幌": "SAPPORO",
+  "函館": "HAKODATE",
+  "福島": "FUKUSHIMA",
+  "新潟": "NIIGATA",
+  "東京": "TOKYO",
+  "中山": "NAKAYAMA",
+  "中京": "CHUKYO",
+  "京都": "KYOTO",
+  "阪神": "HANSHIN",
+  "小倉": "KOKURA"
+};
 const TICKET_TYPE_FIELDS = {
   "単勝": ["馬番"],
   "複勝": ["馬番"],
@@ -69,6 +82,13 @@ const filterStatusInput = document.getElementById("filter-status");
 const resetFiltersButton = document.getElementById("reset-filters");
 const exportCsvButton = document.getElementById("export-csv");
 const csvMessage = document.getElementById("csv-message");
+const resultImportFileInput = document.getElementById("result-import-file");
+const readResultImportButton = document.getElementById("read-result-import");
+const applyResultImportButton = document.getElementById("apply-result-import");
+const markRaceMissButton = document.getElementById("mark-race-miss");
+const resultImportMessage = document.getElementById("result-import-message");
+const resultImportPreview = document.getElementById("result-import-preview");
+const resultImportHistoryList = document.getElementById("result-import-history-list");
 const exportBackupButton = document.getElementById("export-backup");
 const restoreFileInput = document.getElementById("restore-file");
 const restoreModeInput = document.getElementById("restore-mode");
@@ -77,12 +97,15 @@ const backupMessage = document.getElementById("backup-message");
 
 let bets = loadBets();
 let simulationSettings = loadSimulationSettings();
+let resultImportHistory = loadResultImportHistory();
 let editingBetId = null;
+let currentResultImportPreview = null;
 
 setToday();
 setSelectValidationMessages();
 renderHorseNumberInputs();
 setFormModeNew();
+saveBets();
 renderBets();
 
 betForm.addEventListener("submit", function (event) {
@@ -166,6 +189,9 @@ resetFiltersButton.addEventListener("click", function () {
 });
 
 exportCsvButton.addEventListener("click", exportVisibleBetsToCsv);
+readResultImportButton.addEventListener("click", readResultImportFile);
+applyResultImportButton.addEventListener("click", applyResultImport);
+markRaceMissButton.addEventListener("click", markPendingBetsAsMissForImportedRaces);
 exportBackupButton.addEventListener("click", exportBackupJson);
 restoreBackupButton.addEventListener("click", restoreBackupJson);
 ticketTypeInput.addEventListener("change", renderHorseNumberInputs);
@@ -256,6 +282,32 @@ function saveBets() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(bets));
 }
 
+function loadResultImportHistory() {
+  const savedHistory = localStorage.getItem(IMPORT_HISTORY_STORAGE_KEY);
+
+  if (savedHistory === null) {
+    return [];
+  }
+
+  try {
+    const parsedHistory = JSON.parse(savedHistory);
+
+    if (!Array.isArray(parsedHistory)) {
+      return [];
+    }
+
+    return parsedHistory.map(normalizeResultImportHistoryItem).filter(function (historyItem) {
+      return historyItem.importedAt !== "";
+    });
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveResultImportHistory() {
+  localStorage.setItem(IMPORT_HISTORY_STORAGE_KEY, JSON.stringify(resultImportHistory));
+}
+
 function loadSimulationSettings() {
   const savedSettings = localStorage.getItem(SIMULATION_STORAGE_KEY);
 
@@ -293,6 +345,7 @@ function normalizeSimulationSettings(settings) {
 function renderBets() {
   updatePlaceFilterOptions();
   clearCsvMessage();
+  renderResultImportHistory();
 
   const filteredBets = getFilteredBets();
 
@@ -323,6 +376,7 @@ function createBetCard(bet) {
   const tagsHtml = createTagsHtml(bet.tags);
   const createdAtText = formatDateTime(bet.createdAt);
   const updatedAtText = formatDateTime(bet.updatedAt);
+  const raceIdText = bet.raceId || createRaceId(bet.date, bet.place, bet.race);
 
   card.innerHTML = `
     <div class="bet-card-header">
@@ -341,6 +395,10 @@ function createBetCard(bet) {
       <div>
         <dt>券種</dt>
         <dd>${escapeHtml(bet.ticketType)}</dd>
+      </div>
+      <div>
+        <dt>raceId</dt>
+        <dd>${escapeHtml(raceIdText || "生成不可")}</dd>
       </div>
       <div>
         <dt>買い目</dt>
@@ -401,14 +459,20 @@ function normalizeBet(bet) {
 
   // v1の保存データにはstatus/payoutがないため、ここでv2の形にそろえます。
   const status = bet.status || bet.result || "未確定";
+  const date = bet.date || "";
+  const place = bet.place || bet.track || "";
+  const race = normalizeRaceNumber(bet.race) || bet.race || "";
+  const ticketType = normalizeTicketType(bet.ticketType || bet.betType);
+  const betNumbers = normalizeCombinationForTicketType(ticketType, bet.betNumbers || bet.combination || "");
 
   return {
     id: bet.id,
-    date: bet.date,
-    place: bet.place || bet.track,
-    race: bet.race,
-    ticketType: bet.ticketType || bet.betType,
-    betNumbers: bet.betNumbers || bet.combination || "",
+    raceId: normalizeRaceId(bet.raceId) || createRaceId(date, place, race),
+    date: date,
+    place: place,
+    race: race,
+    ticketType: ticketType,
+    betNumbers: betNumbers,
     amount: Number(bet.amount) || 0,
     status: normalizeStatus(status),
     payout: Number(bet.payout) || 0,
@@ -436,6 +500,14 @@ function normalizeStatus(status) {
   }
 
   return "未確定";
+}
+
+function normalizeTicketType(ticketType) {
+  if (TICKET_TYPES.includes(ticketType)) {
+    return ticketType;
+  }
+
+  return String(ticketType || "").trim();
 }
 
 function normalizeTags(tags) {
@@ -674,13 +746,19 @@ function clearBetNumbersError() {
 function createBetValuesFromForm(combination) {
   const status = normalizeStatus(statusInput.value);
   const payout = status === "的中" ? Number(payoutInput.value) || 0 : 0;
+  const date = dateInput.value;
+  const place = placeInput.value.trim();
+  const race = normalizeRaceNumber(raceInput.value);
+  const ticketType = ticketTypeInput.value;
+  const normalizedCombination = normalizeCombinationForTicketType(ticketType, combination);
 
   return {
-    date: dateInput.value,
-    place: placeInput.value.trim(),
-    race: normalizeRaceNumber(raceInput.value),
-    ticketType: ticketTypeInput.value,
-    betNumbers: combination,
+    raceId: createRaceId(date, place, race),
+    date: date,
+    place: place,
+    race: race,
+    ticketType: ticketType,
+    betNumbers: normalizedCombination,
     amount: Number(amountInput.value),
     status: editingBetId === null ? "未確定" : status,
     payout: editingBetId === null ? 0 : payout,
@@ -797,7 +875,7 @@ function ensureSelectHasOption(select, value) {
 
 function normalizeRaceNumber(value) {
   const text = String(value || "").trim();
-  const match = text.match(/(1[0-2]|[1-9])R$/);
+  const match = text.match(/(1[0-2]|[1-9])\s*R?$/i);
 
   if (match === null) {
     return "";
@@ -810,6 +888,100 @@ function normalizeRaceNumber(value) {
   }
 
   return raceNumber + "R";
+}
+
+function createRaceId(date, place, race) {
+  const dateCode = normalizeRaceIdDate(date);
+  const trackCode = getTrackCode(place);
+  const raceCode = normalizeRaceNumber(race);
+
+  if (dateCode === "" || trackCode === "" || raceCode === "") {
+    return "";
+  }
+
+  return dateCode + "-" + trackCode + "-" + raceCode;
+}
+
+function normalizeRaceId(value) {
+  const text = String(value || "").trim().toUpperCase();
+  const match = text.match(/^(\d{8})-([A-Z]+)-(1[0-2]|[1-9])R$/);
+
+  if (match === null) {
+    return "";
+  }
+
+  return match[1] + "-" + match[2] + "-" + Number(match[3]) + "R";
+}
+
+function normalizeRaceIdDate(date) {
+  const text = String(date || "").trim();
+
+  if (/^\d{8}$/.test(text)) {
+    return text;
+  }
+
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (match === null) {
+    return "";
+  }
+
+  return match[1] + match[2] + match[3];
+}
+
+function getTrackCode(place) {
+  const text = String(place || "").trim();
+
+  if (TRACK_CODES[text]) {
+    return TRACK_CODES[text];
+  }
+
+  const upperText = text.toUpperCase();
+  const codeValues = Object.keys(TRACK_CODES).map(function (trackName) {
+    return TRACK_CODES[trackName];
+  });
+
+  if (codeValues.includes(upperText)) {
+    return upperText;
+  }
+
+  return "";
+}
+
+function normalizeCombinationForTicketType(ticketType, combination) {
+  const numbers = String(combination || "").match(/\d+/g) || [];
+
+  if (numbers.length === 0) {
+    return String(combination || "").trim();
+  }
+
+  const normalizedNumbers = numbers.map(function (numberText) {
+    return String(Number(numberText));
+  });
+
+  if (ticketType === "単勝" || ticketType === "複勝") {
+    return normalizedNumbers[0];
+  }
+
+  if (ORDERLESS_TICKET_TYPES.includes(ticketType)) {
+    return normalizedNumbers.slice().sort(function (a, b) {
+      return Number(a) - Number(b);
+    }).join("-");
+  }
+
+  if (ticketType === "馬単" || ticketType === "三連単") {
+    return normalizedNumbers.join("→");
+  }
+
+  return normalizedNumbers.join("-");
+}
+
+function createResultMatchKey(raceId, ticketType, combination) {
+  return [
+    normalizeRaceId(raceId),
+    normalizeTicketType(ticketType),
+    normalizeCombinationForTicketType(ticketType, combination)
+  ].join("|");
 }
 
 function updateFormPayoutState() {
@@ -850,6 +1022,7 @@ function exportBackupJson() {
     exportedAt: new Date().toISOString(),
     data: {
       simulation: normalizeSimulationSettings(simulationSettings),
+      resultImportHistory: resultImportHistory.map(normalizeResultImportHistoryItem),
       bets: bets.map(function (bet) {
         return normalizeBet(bet);
       })
@@ -893,8 +1066,12 @@ function restoreBackupJson() {
 
       bets = mode === "append" ? bets.concat(restoredBets) : restoredBets;
       simulationSettings = importedBackup.simulation;
+      resultImportHistory = mode === "append"
+        ? importedBackup.resultImportHistory.concat(resultImportHistory)
+        : importedBackup.resultImportHistory;
       saveBets();
       saveSimulationSettings();
+      saveResultImportHistory();
       renderBets();
       restoreFileInput.value = "";
 
@@ -935,7 +1112,8 @@ function parseBackupJson(jsonText) {
 
   return {
     bets: backupBets,
-    simulation: getBackupSimulationSettings(parsedBackup)
+    simulation: getBackupSimulationSettings(parsedBackup),
+    resultImportHistory: getBackupResultImportHistory(parsedBackup)
   };
 }
 
@@ -970,6 +1148,18 @@ function getBackupSimulationSettings(parsedBackup) {
   return createDefaultSimulationSettings();
 }
 
+function getBackupResultImportHistory(parsedBackup) {
+  if (parsedBackup.data && Array.isArray(parsedBackup.data.resultImportHistory)) {
+    return parsedBackup.data.resultImportHistory.map(normalizeResultImportHistoryItem);
+  }
+
+  if (Array.isArray(parsedBackup.resultImportHistory)) {
+    return parsedBackup.resultImportHistory.map(normalizeResultImportHistoryItem);
+  }
+
+  return [];
+}
+
 function validateBackupBets(backupBets) {
   const hasInvalidBet = backupBets.some(function (bet) {
     return bet === null || typeof bet !== "object" || Array.isArray(bet);
@@ -983,6 +1173,7 @@ function validateBackupBets(backupBets) {
 function createCsvText(targetBets) {
   const header = [
     "date",
+    "raceId",
     "track",
     "race",
     "betType",
@@ -1003,6 +1194,7 @@ function createCsvText(targetBets) {
 
     return [
       bet.date,
+      bet.raceId,
       bet.place,
       bet.race,
       bet.ticketType,
@@ -1042,6 +1234,376 @@ function escapeCsvValue(value) {
 
 function downloadCsv(csvText, fileName) {
   downloadTextFile(csvText, fileName, "text/csv;charset=utf-8;");
+}
+
+function readResultImportFile() {
+  const file = resultImportFileInput.files[0];
+
+  if (file === undefined) {
+    showResultImportMessage("結果データファイルを選択してください。", true);
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.addEventListener("load", function () {
+    try {
+      const importedResults = parseResultImportFile(reader.result, file.name);
+      currentResultImportPreview = createResultImportPreview(importedResults, file.name);
+      renderResultImportPreview(currentResultImportPreview);
+      showResultImportMessage(file.name + " を読み込みました。内容を確認してから反映してください。", false);
+    } catch (error) {
+      currentResultImportPreview = null;
+      renderResultImportPreview(null);
+      showResultImportMessage(error.message, true);
+    }
+  });
+
+  reader.addEventListener("error", function () {
+    showResultImportMessage("結果データファイルを読み込めませんでした。", true);
+  });
+
+  reader.readAsText(file);
+}
+
+function parseResultImportFile(text, fileName) {
+  const lowerFileName = String(fileName || "").toLowerCase();
+  const rawRows = lowerFileName.endsWith(".csv") ? parseResultCsv(text) : parseResultJson(text);
+  const results = rawRows.map(normalizeResultRow).filter(function (result) {
+    return result.raceId !== "" && result.betType !== "" && result.combination !== "" && result.payout >= 0;
+  });
+
+  if (results.length === 0) {
+    throw new Error("読み込める結果データがありません。raceId、betType、combination、payoutを確認してください。");
+  }
+
+  return results;
+}
+
+function parseResultJson(text) {
+  let parsedJson;
+
+  try {
+    parsedJson = JSON.parse(text);
+  } catch (error) {
+    throw new Error("results.jsonのJSON形式が正しくありません。");
+  }
+
+  if (!Array.isArray(parsedJson)) {
+    throw new Error("results.jsonは配列形式にしてください。");
+  }
+
+  return parsedJson;
+}
+
+function parseResultCsv(text) {
+  const rows = parseCsvRows(String(text || "").replace(/^\uFEFF/, ""));
+
+  if (rows.length < 2) {
+    throw new Error("CSVはヘッダー行とデータ行を含めてください。");
+  }
+
+  const headers = rows[0].map(function (header) {
+    return String(header || "").trim();
+  });
+
+  return rows.slice(1).filter(function (row) {
+    return row.some(function (value) {
+      return String(value || "").trim() !== "";
+    });
+  }).map(function (row) {
+    const record = {};
+
+    headers.forEach(function (header, index) {
+      record[header] = row[index] || "";
+    });
+
+    return record;
+  });
+}
+
+function parseCsvRows(text) {
+  const rows = [];
+  let row = [];
+  let value = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
+    const nextCharacter = text[index + 1];
+
+    if (character === '"') {
+      if (inQuotes && nextCharacter === '"') {
+        value += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (character === "," && !inQuotes) {
+      row.push(value);
+      value = "";
+    } else if ((character === "\n" || character === "\r") && !inQuotes) {
+      if (character === "\r" && nextCharacter === "\n") {
+        index += 1;
+      }
+
+      row.push(value);
+      rows.push(row);
+      row = [];
+      value = "";
+    } else {
+      value += character;
+    }
+  }
+
+  row.push(value);
+  rows.push(row);
+  return rows;
+}
+
+function normalizeResultRow(row) {
+  const betType = normalizeTicketType(row.betType || row.ticketType || "");
+
+  return {
+    raceId: normalizeRaceId(row.raceId),
+    betType: betType,
+    combination: normalizeCombinationForTicketType(betType, row.combination || row.betNumbers || ""),
+    payout: Number(row.payout)
+  };
+}
+
+function createResultImportPreview(importedResults, fileName) {
+  const resultMap = {};
+  const raceIds = Array.from(new Set(importedResults.map(function (result) {
+    return result.raceId;
+  }))).sort();
+  const unmatchedResults = [];
+
+  importedResults.forEach(function (result) {
+    resultMap[createResultMatchKey(result.raceId, result.betType, result.combination)] = result;
+  });
+
+  const matchedBets = bets.filter(function (bet) {
+    const key = createResultMatchKey(bet.raceId, bet.ticketType, bet.betNumbers);
+    return resultMap[key] !== undefined;
+  }).map(function (bet) {
+    const key = createResultMatchKey(bet.raceId, bet.ticketType, bet.betNumbers);
+    const result = resultMap[key];
+    const reflectedPayout = calculateReflectedPayout(result.payout, bet.amount);
+
+    return {
+      betId: bet.id,
+      raceId: bet.raceId,
+      betType: bet.ticketType,
+      combination: bet.betNumbers,
+      amount: Number(bet.amount) || 0,
+      resultPayout: result.payout,
+      reflectedPayout: reflectedPayout,
+      currentStatus: bet.status
+    };
+  });
+
+  importedResults.forEach(function (result) {
+    const hasMatchedBet = bets.some(function (bet) {
+      return createResultMatchKey(bet.raceId, bet.ticketType, bet.betNumbers) === createResultMatchKey(result.raceId, result.betType, result.combination);
+    });
+
+    if (!hasMatchedBet) {
+      unmatchedResults.push(result);
+    }
+  });
+
+  return {
+    fileName: fileName,
+    importedResults: importedResults,
+    resultCount: importedResults.length,
+    matchedBets: matchedBets,
+    matchedCount: matchedBets.length,
+    hitPlannedCount: matchedBets.length,
+    unmatchedCount: unmatchedResults.length,
+    raceIds: raceIds
+  };
+}
+
+function calculateReflectedPayout(resultPayout, amount) {
+  return Math.round((Number(resultPayout) || 0) * ((Number(amount) || 0) / 100));
+}
+
+function renderResultImportPreview(preview) {
+  applyResultImportButton.disabled = preview === null || preview.matchedCount === 0;
+  markRaceMissButton.disabled = preview === null || preview.raceIds.length === 0;
+
+  if (preview === null) {
+    resultImportPreview.innerHTML = '<p class="import-empty">結果データを読み込むと、ここにプレビューが表示されます。</p>';
+    return;
+  }
+
+  const raceIdsHtml = preview.raceIds.map(function (raceId) {
+    return '<span class="tag-chip">' + escapeHtml(raceId) + "</span>";
+  }).join("");
+  const matchedRowsHtml = preview.matchedBets.length === 0
+    ? '<tr><td colspan="7" class="empty-table-cell">的中予定の購入記録はありません。</td></tr>'
+    : preview.matchedBets.map(function (matchedBet) {
+        return `
+          <tr>
+            <td>${escapeHtml(matchedBet.raceId)}</td>
+            <td>${escapeHtml(matchedBet.betType)}</td>
+            <td>${escapeHtml(matchedBet.combination)}</td>
+            <td>${formatYen(matchedBet.amount)}円</td>
+            <td>${formatYen(matchedBet.resultPayout)}円</td>
+            <td>${formatYen(matchedBet.reflectedPayout)}円</td>
+            <td>${escapeHtml(matchedBet.currentStatus)}</td>
+          </tr>
+        `;
+      }).join("");
+
+  resultImportPreview.innerHTML = `
+    <div class="import-preview-grid">
+      <div><span>読込件数</span><strong>${preview.resultCount}件</strong></div>
+      <div><span>照合できた購入記録</span><strong>${preview.matchedCount}件</strong></div>
+      <div><span>的中予定</span><strong>${preview.hitPlannedCount}件</strong></div>
+      <div><span>不一致</span><strong>${preview.unmatchedCount}件</strong></div>
+    </div>
+    <div class="import-race-list" aria-label="対象raceId一覧">${raceIdsHtml}</div>
+    <div class="table-scroll">
+      <table class="analysis-table result-import-table">
+        <thead>
+          <tr>
+            <th>raceId</th>
+            <th>券種</th>
+            <th>買い目</th>
+            <th>購入金額</th>
+            <th>100円払戻</th>
+            <th>反映払戻</th>
+            <th>現在結果</th>
+          </tr>
+        </thead>
+        <tbody>${matchedRowsHtml}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function applyResultImport() {
+  if (currentResultImportPreview === null) {
+    showResultImportMessage("先に結果データを読み込んでください。", true);
+    return;
+  }
+
+  const nowText = new Date().toISOString();
+  let appliedCount = 0;
+
+  currentResultImportPreview.matchedBets.forEach(function (matchedBet) {
+    const bet = findBet(matchedBet.betId);
+
+    if (bet === undefined) {
+      return;
+    }
+
+    bet.status = "的中";
+    bet.payout = matchedBet.reflectedPayout;
+    bet.updatedAt = nowText;
+    appliedCount += 1;
+  });
+
+  addResultImportHistory(currentResultImportPreview, appliedCount);
+  saveBets();
+  saveResultImportHistory();
+  renderBets();
+  renderResultImportPreview(currentResultImportPreview);
+  showResultImportMessage(appliedCount + "件の結果を反映しました。", false);
+}
+
+function markPendingBetsAsMissForImportedRaces() {
+  if (currentResultImportPreview === null) {
+    showResultImportMessage("先に結果データを読み込んでください。", true);
+    return;
+  }
+
+  if (!window.confirm("対象raceIdの未確定購入記録を、結果データと一致しないものだけ不的中にします。実行しますか？")) {
+    return;
+  }
+
+  const resultKeys = {};
+  const raceIdSet = new Set(currentResultImportPreview.raceIds);
+  let changedCount = 0;
+  const nowText = new Date().toISOString();
+
+  currentResultImportPreview.importedResults.forEach(function (result) {
+    resultKeys[createResultMatchKey(result.raceId, result.betType, result.combination)] = true;
+  });
+
+  bets.forEach(function (bet) {
+    const key = createResultMatchKey(bet.raceId, bet.ticketType, bet.betNumbers);
+
+    if (!raceIdSet.has(bet.raceId) || bet.status !== "未確定" || resultKeys[key]) {
+      return;
+    }
+
+    bet.status = "不的中";
+    bet.payout = 0;
+    bet.updatedAt = nowText;
+    changedCount += 1;
+  });
+
+  saveBets();
+  renderBets();
+  showResultImportMessage(changedCount + "件の未確定購入記録を不的中にしました。", false);
+}
+
+function addResultImportHistory(preview, appliedCount) {
+  resultImportHistory.unshift({
+    importedAt: new Date().toISOString(),
+    fileName: preview.fileName,
+    resultCount: preview.resultCount,
+    matchedCount: preview.matchedCount,
+    appliedCount: appliedCount,
+    raceIds: preview.raceIds
+  });
+
+  resultImportHistory = resultImportHistory.slice(0, 20);
+}
+
+function normalizeResultImportHistoryItem(historyItem) {
+  historyItem = historyItem || {};
+
+  return {
+    importedAt: historyItem.importedAt || "",
+    fileName: historyItem.fileName || "",
+    resultCount: Number(historyItem.resultCount) || 0,
+    matchedCount: Number(historyItem.matchedCount) || 0,
+    appliedCount: Number(historyItem.appliedCount) || 0,
+    raceIds: Array.isArray(historyItem.raceIds) ? historyItem.raceIds.map(normalizeRaceId).filter(function (raceId) {
+      return raceId !== "";
+    }) : []
+  };
+}
+
+function renderResultImportHistory() {
+  if (resultImportHistory.length === 0) {
+    resultImportHistoryList.innerHTML = '<p class="import-empty">取り込み履歴はまだありません。</p>';
+    return;
+  }
+
+  resultImportHistoryList.innerHTML = resultImportHistory.slice(0, 5).map(function (historyItem) {
+    return `
+      <article class="import-history-item">
+        <h3>${escapeHtml(formatDateTime(historyItem.importedAt) || "日時不明")}</h3>
+        <p>${escapeHtml(historyItem.fileName || "ファイル名なし")}</p>
+        <dl>
+          <div><dt>結果</dt><dd>${historyItem.resultCount}件</dd></div>
+          <div><dt>照合</dt><dd>${historyItem.matchedCount}件</dd></div>
+          <div><dt>反映</dt><dd>${historyItem.appliedCount}件</dd></div>
+        </dl>
+        <p class="history-race-ids">${escapeHtml(historyItem.raceIds.join(", ") || "raceIdなし")}</p>
+      </article>
+    `;
+  }).join("");
+}
+
+function showResultImportMessage(message, isError) {
+  resultImportMessage.textContent = message;
+  resultImportMessage.classList.toggle("is-error", isError);
 }
 
 function downloadTextFile(text, fileName, fileType) {

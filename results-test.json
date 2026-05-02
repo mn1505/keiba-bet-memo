@@ -1,0 +1,14 @@
+[
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "ワイド",
+    "combination": "7-13",
+    "payout": 680
+  },
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "馬単",
+    "combination": "7→13",
+    "payout": 2540
+  }
+]
