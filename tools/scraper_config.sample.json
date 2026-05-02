@@ -1,0 +1,6 @@
+{
+  "delaySeconds": 5,
+  "timeoutSeconds": 15,
+  "allowMultipleUrls": false,
+  "notes": "Use manually and check target site's terms and robots.txt before running."
+}
