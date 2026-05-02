@@ -2,10 +2,11 @@ const STORAGE_KEY = "keibaBetMemoList";
 const SIMULATION_STORAGE_KEY = "keibaBetMemoSimulationSettings";
 const IMPORT_HISTORY_STORAGE_KEY = "keibaBetMemoResultImportHistory";
 const APP_NAME = "keiba-bet-memo";
-const APP_VERSION = "v10";
+const APP_VERSION = "v12.5-A";
 const DEFAULT_INITIAL_FUND = 100000;
 const RACE_OPTIONS = ["1R", "2R", "3R", "4R", "5R", "6R", "7R", "8R", "9R", "10R", "11R", "12R"];
 const TICKET_TYPES = ["単勝", "複勝", "ワイド", "馬連", "馬単", "三連複", "三連単"];
+const PURCHASE_MODES = ["通常", "ながし", "ボックス", "フォーメーション"];
 const STATUS_TYPES = ["未確定", "的中", "不的中"];
 const TRACK_CODES = {
   "札幌": "SAPPORO",
@@ -29,15 +30,24 @@ const TICKET_TYPE_FIELDS = {
   "三連単": ["1着", "2着", "3着"]
 };
 const ORDERLESS_TICKET_TYPES = ["ワイド", "馬連", "三連複"];
+const HORSE_NUMBERS = Array.from({ length: 18 }, function (_, index) {
+  return String(index + 1);
+});
 
 const betForm = document.getElementById("bet-form");
 const dateInput = document.getElementById("date");
 const placeInput = document.getElementById("place");
 const raceInput = document.getElementById("race");
 const ticketTypeInput = document.getElementById("ticket-type");
+const purchaseModeInputs = Array.from(document.querySelectorAll('input[name="purchase-mode"]'));
+const purchaseModeNote = document.getElementById("purchase-mode-note");
 const betNumbersInput = document.getElementById("bet-numbers");
 const horseNumberFields = document.getElementById("horse-number-fields");
 const betNumbersError = document.getElementById("bet-numbers-error");
+const generatedCount = document.getElementById("generated-count");
+const generatedTotalAmount = document.getElementById("generated-total-amount");
+const generatedPreview = document.getElementById("generated-preview");
+const generatedWarning = document.getElementById("generated-warning");
 const amountInput = document.getElementById("amount");
 const memoInput = document.getElementById("memo");
 const tagsInput = document.getElementById("tags");
@@ -71,6 +81,7 @@ const analysisBasicCards = document.getElementById("analysis-basic-cards");
 const analysisDateTable = document.getElementById("analysis-date-table");
 const analysisPlaceTable = document.getElementById("analysis-place-table");
 const analysisTagTable = document.getElementById("analysis-tag-table");
+const analysisPurchaseModeTable = document.getElementById("analysis-purchase-mode-table");
 const analysisTicketRanking = document.getElementById("analysis-ticket-ranking");
 const analysisPlaceRanking = document.getElementById("analysis-place-ranking");
 const analysisTagRanking = document.getElementById("analysis-tag-ranking");
@@ -104,6 +115,7 @@ let currentResultImportPreview = null;
 setToday();
 setSelectValidationMessages();
 renderHorseNumberInputs();
+updateGeneratedPreview();
 setFormModeNew();
 saveBets();
 renderBets();
@@ -123,37 +135,81 @@ betForm.addEventListener("submit", function (event) {
     return;
   }
 
-  const combination = validateAndBuildCombination();
-
-  if (combination === "") {
-    return;
-  }
-
-  if (!confirmAmountIfNeeded()) {
-    return;
-  }
-
   const nowText = new Date().toISOString();
-  const formValues = createBetValuesFromForm(combination);
-
-  const projectedBalance = calculateProjectedBalance(formValues, editingBetId);
-
-  if (projectedBalance < 0) {
-    const shortage = Math.abs(projectedBalance);
-    showSimulationMessage("現在残高が不足しています。保存すると残高が" + formatYen(shortage) + "円不足します。", true);
-    amountInput.focus();
-    return;
-  }
 
   if (editingBetId === null) {
-    const bet = Object.assign({}, formValues, {
-      id: createUniqueId(createUsedIdSet(bets)),
-      createdAt: nowText,
-      updatedAt: nowText
+    const combinations = validateAndBuildCombinations();
+
+    if (combinations.length === 0) {
+      return;
+    }
+
+    if (!confirmAmountIfNeeded()) {
+      return;
+    }
+
+    if (combinations.length > 100 && !window.confirm("生成点数が" + combinations.length + "点です。このまま登録しますか？")) {
+      return;
+    }
+
+    const amountPerPoint = Number(amountInput.value) || 0;
+    const totalPurchaseAmount = combinations.length * amountPerPoint;
+    const currentBalance = calculateSimulationSummary(null).currentBalance;
+
+    if (totalPurchaseAmount > currentBalance) {
+      showSimulationMessage("現在残高が不足しています。合計購入金額が現在残高を" + formatYen(totalPurchaseAmount - currentBalance) + "円超えています。", true);
+      amountInput.focus();
+      return;
+    }
+
+    const duplicateCombinations = findExistingDuplicateCombinations(combinations);
+
+    if (duplicateCombinations.length > 0 && !window.confirm("同じ日付・競馬場・レース・券種・買い目が既にあります。重複：" + duplicateCombinations.join(", ") + "。このまま登録しますか？")) {
+      return;
+    }
+
+    const usedIds = createUsedIdSet(bets);
+    const groupId = combinations.length > 1 ? createGeneratedGroupId() : "";
+    const formValues = createBetValuesFromForm("");
+    const newBets = combinations.map(function (combination) {
+      const id = createUniqueId(usedIds);
+      usedIds.add(String(id));
+
+      return Object.assign({}, formValues, {
+        id: id,
+        betNumbers: normalizeCombinationForTicketType(formValues.ticketType, combination),
+        amount: amountPerPoint,
+        status: "未確定",
+        payout: 0,
+        purchaseMode: getEffectivePurchaseMode(formValues.ticketType),
+        generatedGroupId: groupId,
+        createdAt: nowText,
+        updatedAt: nowText
+      });
     });
 
-    bets.push(bet);
+    bets = bets.concat(newBets);
   } else {
+    const combination = validateAndBuildCombination();
+
+    if (combination === "") {
+      return;
+    }
+
+    if (!confirmAmountIfNeeded()) {
+      return;
+    }
+
+    const formValues = createBetValuesFromForm(combination);
+    const projectedBalance = calculateProjectedBalance(formValues, editingBetId);
+
+    if (projectedBalance < 0) {
+      const shortage = Math.abs(projectedBalance);
+      showSimulationMessage("現在残高が不足しています。保存すると残高が" + formatYen(shortage) + "円不足します。", true);
+      amountInput.focus();
+      return;
+    }
+
     const bet = findBet(editingBetId);
 
     if (bet === undefined) {
@@ -194,7 +250,15 @@ applyResultImportButton.addEventListener("click", applyResultImport);
 markRaceMissButton.addEventListener("click", markPendingBetsAsMissForImportedRaces);
 exportBackupButton.addEventListener("click", exportBackupJson);
 restoreBackupButton.addEventListener("click", restoreBackupJson);
-ticketTypeInput.addEventListener("change", renderHorseNumberInputs);
+ticketTypeInput.addEventListener("change", function () {
+  ticketTypeInput.setCustomValidity("");
+  ensurePurchaseModeAllowed();
+  renderHorseNumberInputs();
+});
+purchaseModeInputs.forEach(function (input) {
+  input.addEventListener("change", renderHorseNumberInputs);
+});
+amountInput.addEventListener("input", updateGeneratedPreview);
 statusInput.addEventListener("change", updateFormPayoutState);
 cancelEditButton.addEventListener("click", resetForm);
 saveInitialFundButton.addEventListener("click", saveInitialFundOnly);
@@ -208,16 +272,18 @@ raceInput.addEventListener("change", function () {
   raceInput.setCustomValidity("");
 });
 
-ticketTypeInput.addEventListener("change", function () {
-  ticketTypeInput.setCustomValidity("");
-});
-
 horseNumberFields.addEventListener("input", function (event) {
-  if (!event.target.classList.contains("horse-number-input")) {
+  if (!event.target.classList.contains("horse-number-input") && !event.target.classList.contains("horse-choice-input") && !event.target.classList.contains("flow-type-input")) {
     return;
   }
 
   clearBetNumbersError();
+  updateGeneratedPreview();
+});
+
+horseNumberFields.addEventListener("change", function () {
+  clearBetNumbersError();
+  updateGeneratedPreview();
 });
 
 // 一覧のボタンはあとから作るため、一覧全体でクリックを受け取ります。
@@ -397,6 +463,16 @@ function createBetCard(bet) {
         <dd>${escapeHtml(bet.ticketType)}</dd>
       </div>
       <div>
+        <dt>買い方</dt>
+        <dd>${escapeHtml(normalizePurchaseMode(bet.purchaseMode))}</dd>
+      </div>
+      ${bet.generatedGroupId ? `
+      <div>
+        <dt>生成グループ</dt>
+        <dd>${escapeHtml(bet.generatedGroupId)}</dd>
+      </div>
+      ` : ""}
+      <div>
         <dt>raceId</dt>
         <dd>${escapeHtml(raceIdText || "生成不可")}</dd>
       </div>
@@ -478,6 +554,8 @@ function normalizeBet(bet) {
     payout: Number(bet.payout) || 0,
     memo: bet.memo || "",
     tags: normalizeTags(bet.tags),
+    purchaseMode: normalizePurchaseMode(bet.purchaseMode),
+    generatedGroupId: String(bet.generatedGroupId || ""),
     createdAt: bet.createdAt || "",
     updatedAt: bet.updatedAt || ""
   };
@@ -508,6 +586,14 @@ function normalizeTicketType(ticketType) {
   }
 
   return String(ticketType || "").trim();
+}
+
+function normalizePurchaseMode(purchaseMode) {
+  if (PURCHASE_MODES.includes(purchaseMode)) {
+    return purchaseMode;
+  }
+
+  return "通常";
 }
 
 function normalizeTags(tags) {
@@ -547,6 +633,7 @@ function startEditBet(id) {
   placeInput.value = bet.place || "";
   raceInput.value = normalizeRaceNumber(bet.race);
   ticketTypeInput.value = bet.ticketType || "";
+  setSelectedPurchaseMode("通常");
   renderHorseNumberInputs();
   fillHorseNumberInputs(bet);
   amountInput.value = bet.amount;
@@ -582,6 +669,7 @@ function duplicateBet(id) {
     race: normalizeRaceNumber(sourceBet.race) || sourceBet.race,
     status: "未確定",
     payout: 0,
+    generatedGroupId: sourceBet.generatedGroupId ? createGeneratedGroupId() : "",
     createdAt: nowText,
     updatedAt: nowText
   });
@@ -625,37 +713,173 @@ function updateBetPayout(id, payout) {
 
 function renderHorseNumberInputs() {
   const ticketType = ticketTypeInput.value;
-  const labels = TICKET_TYPE_FIELDS[ticketType] || [];
+  const purchaseMode = getSelectedPurchaseMode();
+  const labels = purchaseMode === "通常" ? (TICKET_TYPE_FIELDS[ticketType] || []) : [];
 
+  horseNumberFields.className = "horse-number-fields";
   horseNumberFields.innerHTML = "";
   betNumbersInput.value = "";
   clearBetNumbersError();
+  purchaseModeNote.textContent = "";
 
-  if (labels.length === 0) {
+  if (!ticketType) {
     const message = document.createElement("p");
     message.className = "horse-number-placeholder";
     message.textContent = "券種を選ぶと必要な馬番入力欄が表示されます。";
     horseNumberFields.appendChild(message);
+    updateGeneratedPreview();
     return;
   }
 
+  if (purchaseMode === "通常") {
+    labels.forEach(function (labelText, index) {
+      horseNumberFields.appendChild(createSingleHorseInput(labelText, "normal-" + index));
+    });
+  } else if (purchaseMode === "ながし") {
+    horseNumberFields.classList.add("horse-selection-groups", "horse-selection-groups-flow");
+    renderFlowInputs(ticketType);
+  } else if (purchaseMode === "ボックス") {
+    horseNumberFields.classList.add("horse-selection-groups", "horse-selection-groups-box");
+    horseNumberFields.appendChild(createHorseChoiceGroup("選択馬", "box", true));
+  } else if (purchaseMode === "フォーメーション") {
+    horseNumberFields.classList.add("horse-selection-groups", "horse-selection-groups-formation");
+    renderFormationInputs(ticketType);
+  }
+
+  updateGeneratedPreview();
+}
+
+function createSingleHorseInput(labelText, name) {
+  const label = document.createElement("label");
+  const input = document.createElement("input");
+
+  input.type = "text";
+  input.className = "horse-number-input";
+  input.inputMode = "numeric";
+  input.autocomplete = "off";
+  input.setAttribute("list", "horse-number-options");
+  input.setAttribute("aria-label", labelText + "の馬番");
+  input.dataset.name = name;
+  input.placeholder = "1〜18";
+
+  label.textContent = labelText;
+  label.appendChild(input);
+  return label;
+}
+
+function renderFlowInputs(ticketType) {
+  if (ticketType === "単勝" || ticketType === "複勝") {
+    purchaseModeNote.textContent = "単勝・複勝はながし不要のため、通常入力を使用してください。";
+    horseNumberFields.appendChild(createSingleHorseInput("馬番", "normal-0"));
+    return;
+  }
+
+  if (ticketType === "三連単") {
+    purchaseModeNote.textContent = "三連単はフォーメーションを使用してください。";
+    horseNumberFields.appendChild(createMessageBlock("三連単ながしは今回未実装です。買い方をフォーメーションに切り替えてください。"));
+    return;
+  }
+
+  if (ticketType === "馬単") {
+    horseNumberFields.appendChild(createFlowTypeOptions([
+      { value: "first", label: "軸1着ながし" },
+      { value: "second", label: "軸2着ながし" }
+    ]));
+  } else if (ticketType === "三連複") {
+    horseNumberFields.appendChild(createFlowTypeOptions([
+      { value: "one", label: "軸1頭ながし" },
+      { value: "two", label: "軸2頭ながし" }
+    ]));
+  }
+
+  horseNumberFields.appendChild(createHorseChoiceGroup(ticketType === "三連複" ? "軸馬" : "軸馬", "axis", ticketType === "三連複"));
+  horseNumberFields.appendChild(createHorseChoiceGroup("相手馬", "opponent", true));
+}
+
+function renderFormationInputs(ticketType) {
+  if (ticketType === "単勝" || ticketType === "複勝") {
+    purchaseModeNote.textContent = "単勝・複勝は通常またはボックスを使用してください。";
+    horseNumberFields.appendChild(createMessageBlock("単勝・複勝ではフォーメーション入力は不要です。"));
+    return;
+  }
+
+  const labelsByTicketType = {
+    "ワイド": ["1列目", "2列目"],
+    "馬連": ["1列目", "2列目"],
+    "馬単": ["1着候補", "2着候補"],
+    "三連複": ["1列目", "2列目", "3列目"],
+    "三連単": ["1着候補", "2着候補", "3着候補"]
+  };
+  const labels = labelsByTicketType[ticketType] || [];
+
   labels.forEach(function (labelText, index) {
+    horseNumberFields.appendChild(createHorseChoiceGroup(labelText, "formation-" + index, true));
+  });
+}
+
+function createFlowTypeOptions(options) {
+  const wrapper = document.createElement("fieldset");
+  const legend = document.createElement("legend");
+  const row = document.createElement("div");
+
+  wrapper.className = "horse-choice-group flow-type-group";
+  legend.textContent = "ながし方式";
+  row.className = "segment-options flow-option-row";
+
+  options.forEach(function (option, index) {
     const label = document.createElement("label");
     const input = document.createElement("input");
 
-    input.type = "text";
-    input.className = "horse-number-input";
-    input.inputMode = "numeric";
-    input.autocomplete = "off";
-    input.setAttribute("list", "horse-number-options");
-    input.setAttribute("aria-label", labelText + "の馬番");
-    input.dataset.index = String(index);
-    input.placeholder = "1〜18";
-
-    label.textContent = labelText;
+    input.type = "radio";
+    input.name = "flow-type";
+    input.value = option.value;
+    input.className = "flow-type-input";
+    input.checked = index === 0;
     label.appendChild(input);
-    horseNumberFields.appendChild(label);
+    label.appendChild(document.createTextNode(option.label));
+    row.appendChild(label);
   });
+
+  wrapper.appendChild(legend);
+  wrapper.appendChild(row);
+  return wrapper;
+}
+
+function createHorseChoiceGroup(title, name, multiple) {
+  const wrapper = document.createElement("fieldset");
+  const legend = document.createElement("legend");
+  const grid = document.createElement("div");
+
+  wrapper.className = "horse-choice-group";
+  wrapper.dataset.group = name;
+  legend.className = "horse-choice-title";
+  legend.textContent = title;
+  grid.className = "horse-choice-grid";
+
+  HORSE_NUMBERS.forEach(function (numberText) {
+    const label = document.createElement("label");
+    const input = document.createElement("input");
+
+    input.type = multiple ? "checkbox" : "radio";
+    input.name = name;
+    input.value = numberText;
+    input.className = "horse-choice-input";
+    input.dataset.group = name;
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(numberText));
+    grid.appendChild(label);
+  });
+
+  wrapper.appendChild(legend);
+  wrapper.appendChild(grid);
+  return wrapper;
+}
+
+function createMessageBlock(messageText) {
+  const message = document.createElement("p");
+  message.className = "horse-number-placeholder";
+  message.textContent = messageText;
+  return message;
 }
 
 function validateAndBuildCombination() {
@@ -718,6 +942,271 @@ function validateAndBuildCombination() {
   return combination;
 }
 
+function validateAndBuildCombinations() {
+  const ticketType = ticketTypeInput.value;
+  const purchaseMode = getSelectedPurchaseMode();
+  let combinations = [];
+
+  clearBetNumbersError();
+
+  if (!ticketType) {
+    ticketTypeInput.setCustomValidity("券種を選択してください。");
+    ticketTypeInput.reportValidity();
+    return [];
+  }
+
+  if (purchaseMode === "通常" || (purchaseMode === "ながし" && (ticketType === "単勝" || ticketType === "複勝"))) {
+    const combination = validateAndBuildCombination();
+    return combination === "" ? [] : [combination];
+  }
+
+  if (purchaseMode === "ながし" && ticketType === "三連単") {
+    betNumbersError.textContent = "三連単はフォーメーションを使用してください。";
+    return [];
+  }
+
+  if (purchaseMode === "ボックス") {
+    combinations = buildBoxCombinations(ticketType);
+  } else if (purchaseMode === "ながし") {
+    combinations = buildFlowCombinations(ticketType);
+  } else if (purchaseMode === "フォーメーション") {
+    combinations = buildFormationCombinations(ticketType);
+  }
+
+  if (combinations.length === 0) {
+    const message = "生成できる買い目がありません。馬番の選択数と重複を確認してください。";
+    betNumbersError.textContent = message;
+    return [];
+  }
+
+  combinations = uniqueCombinations(combinations, ticketType);
+  betNumbersInput.value = combinations.join(", ");
+  return combinations;
+}
+
+function buildBoxCombinations(ticketType) {
+  const selected = getSelectedHorseNumbers("box");
+
+  if (ticketType === "単勝" || ticketType === "複勝") {
+    return selected;
+  }
+
+  if (ticketType === "ワイド" || ticketType === "馬連") {
+    return combinationsOf(selected, 2).map(joinOrderless);
+  }
+
+  if (ticketType === "馬単") {
+    return permutationsOf(selected, 2).map(joinOrdered);
+  }
+
+  if (ticketType === "三連複") {
+    return combinationsOf(selected, 3).map(joinOrderless);
+  }
+
+  if (ticketType === "三連単") {
+    return permutationsOf(selected, 3).map(joinOrdered);
+  }
+
+  return [];
+}
+
+function buildFlowCombinations(ticketType) {
+  const axis = getSelectedHorseNumbers("axis");
+  const opponents = getSelectedHorseNumbers("opponent");
+  const flowType = getSelectedFlowType();
+
+  if (ticketType === "ワイド" || ticketType === "馬連") {
+    if (axis.length !== 1 || opponents.length < 1) {
+      return [];
+    }
+
+    return opponents.filter(function (opponent) {
+      return opponent !== axis[0];
+    }).map(function (opponent) {
+      return joinOrderless([axis[0], opponent]);
+    });
+  }
+
+  if (ticketType === "馬単") {
+    if (axis.length !== 1 || opponents.length < 1) {
+      return [];
+    }
+
+    return opponents.filter(function (opponent) {
+      return opponent !== axis[0];
+    }).map(function (opponent) {
+      return flowType === "second" ? joinOrdered([opponent, axis[0]]) : joinOrdered([axis[0], opponent]);
+    });
+  }
+
+  if (ticketType === "三連複" && flowType === "two") {
+    if (axis.length !== 2 || opponents.length < 1) {
+      return [];
+    }
+
+    return opponents.filter(function (opponent) {
+      return !axis.includes(opponent);
+    }).map(function (opponent) {
+      return joinOrderless(axis.concat([opponent]));
+    });
+  }
+
+  if (ticketType === "三連複") {
+    if (axis.length !== 1 || opponents.length < 2) {
+      return [];
+    }
+
+    return combinationsOf(opponents.filter(function (opponent) {
+      return opponent !== axis[0];
+    }), 2).map(function (opponentPair) {
+      return joinOrderless(axis.concat(opponentPair));
+    });
+  }
+
+  return [];
+}
+
+function buildFormationCombinations(ticketType) {
+  const first = getSelectedHorseNumbers("formation-0");
+  const second = getSelectedHorseNumbers("formation-1");
+  const third = getSelectedHorseNumbers("formation-2");
+  const combinations = [];
+
+  if (ticketType === "ワイド" || ticketType === "馬連") {
+    first.forEach(function (firstNumber) {
+      second.forEach(function (secondNumber) {
+        if (firstNumber !== secondNumber) {
+          combinations.push(joinOrderless([firstNumber, secondNumber]));
+        }
+      });
+    });
+    return combinations;
+  }
+
+  if (ticketType === "馬単") {
+    first.forEach(function (firstNumber) {
+      second.forEach(function (secondNumber) {
+        if (firstNumber !== secondNumber) {
+          combinations.push(joinOrdered([firstNumber, secondNumber]));
+        }
+      });
+    });
+    return combinations;
+  }
+
+  if (ticketType === "三連複") {
+    first.forEach(function (firstNumber) {
+      second.forEach(function (secondNumber) {
+        third.forEach(function (thirdNumber) {
+          if (hasUniqueNumbers([firstNumber, secondNumber, thirdNumber])) {
+            combinations.push(joinOrderless([firstNumber, secondNumber, thirdNumber]));
+          }
+        });
+      });
+    });
+    return combinations;
+  }
+
+  if (ticketType === "三連単") {
+    first.forEach(function (firstNumber) {
+      second.forEach(function (secondNumber) {
+        third.forEach(function (thirdNumber) {
+          if (hasUniqueNumbers([firstNumber, secondNumber, thirdNumber])) {
+            combinations.push(joinOrdered([firstNumber, secondNumber, thirdNumber]));
+          }
+        });
+      });
+    });
+  }
+
+  return combinations;
+}
+
+function getSelectedHorseNumbers(groupName) {
+  return Array.from(horseNumberFields.querySelectorAll('.horse-choice-input[data-group="' + groupName + '"]:checked')).map(function (input) {
+    return input.value;
+  }).sort(function (a, b) {
+    return Number(a) - Number(b);
+  });
+}
+
+function getSelectedFlowType() {
+  const checked = horseNumberFields.querySelector('input[name="flow-type"]:checked');
+  return checked ? checked.value : "";
+}
+
+function uniqueCombinations(combinations, ticketType) {
+  const seen = {};
+  const uniqueValues = [];
+
+  combinations.forEach(function (combination) {
+    const normalizedCombination = normalizeCombinationForTicketType(ticketType, combination);
+
+    if (!seen[normalizedCombination]) {
+      seen[normalizedCombination] = true;
+      uniqueValues.push(normalizedCombination);
+    }
+  });
+
+  return uniqueValues;
+}
+
+function combinationsOf(values, size) {
+  const results = [];
+
+  function walk(startIndex, picked) {
+    if (picked.length === size) {
+      results.push(picked.slice());
+      return;
+    }
+
+    for (let index = startIndex; index < values.length; index += 1) {
+      picked.push(values[index]);
+      walk(index + 1, picked);
+      picked.pop();
+    }
+  }
+
+  walk(0, []);
+  return results;
+}
+
+function permutationsOf(values, size) {
+  const results = [];
+
+  function walk(picked) {
+    if (picked.length === size) {
+      results.push(picked.slice());
+      return;
+    }
+
+    values.forEach(function (value) {
+      if (!picked.includes(value)) {
+        picked.push(value);
+        walk(picked);
+        picked.pop();
+      }
+    });
+  }
+
+  walk([]);
+  return results;
+}
+
+function joinOrderless(values) {
+  return values.slice().sort(function (a, b) {
+    return Number(a) - Number(b);
+  }).join("-");
+}
+
+function joinOrdered(values) {
+  return values.join("→");
+}
+
+function hasUniqueNumbers(values) {
+  return new Set(values).size === values.length;
+}
+
 function isValidHorseNumber(value) {
   if (!/^\d+$/.test(value)) {
     return false;
@@ -729,9 +1218,13 @@ function isValidHorseNumber(value) {
 
 function showBetNumbersError(input, message) {
   betNumbersError.textContent = message;
-  input.setCustomValidity(message);
-  input.reportValidity();
-  input.setCustomValidity("");
+
+  if (input && typeof input.setCustomValidity === "function") {
+    input.setCustomValidity(message);
+    input.reportValidity();
+    input.setCustomValidity("");
+  }
+
   return "";
 }
 
@@ -763,7 +1256,9 @@ function createBetValuesFromForm(combination) {
     status: editingBetId === null ? "未確定" : status,
     payout: editingBetId === null ? 0 : payout,
     memo: memoInput.value.trim(),
-    tags: parseTags(tagsInput.value)
+    tags: parseTags(tagsInput.value),
+    purchaseMode: editingBetId === null ? getEffectivePurchaseMode(ticketType) : getEditedPurchaseMode(),
+    generatedGroupId: getEditedGeneratedGroupId()
   };
 }
 
@@ -776,6 +1271,46 @@ function parseTags(text) {
     .filter(function (tag) {
       return tag !== "";
     });
+}
+
+function getSelectedPurchaseMode() {
+  const checked = purchaseModeInputs.find(function (input) {
+    return input.checked;
+  });
+
+  return normalizePurchaseMode(checked ? checked.value : "通常");
+}
+
+function getEffectivePurchaseMode(ticketType) {
+  const purchaseMode = getSelectedPurchaseMode();
+
+  if ((ticketType === "単勝" || ticketType === "複勝") && purchaseMode === "ながし") {
+    return "通常";
+  }
+
+  return purchaseMode;
+}
+
+function setSelectedPurchaseMode(purchaseMode) {
+  const normalizedPurchaseMode = normalizePurchaseMode(purchaseMode);
+
+  purchaseModeInputs.forEach(function (input) {
+    input.checked = input.value === normalizedPurchaseMode;
+  });
+}
+
+function getEditedPurchaseMode() {
+  const bet = editingBetId === null ? undefined : findBet(editingBetId);
+  return bet === undefined ? getSelectedPurchaseMode() : normalizePurchaseMode(bet.purchaseMode);
+}
+
+function getEditedGeneratedGroupId() {
+  const bet = editingBetId === null ? undefined : findBet(editingBetId);
+  return bet === undefined ? "" : String(bet.generatedGroupId || "");
+}
+
+function createGeneratedGroupId() {
+  return "grp-" + Date.now() + "-" + Math.floor(Math.random() * 100000);
 }
 
 function confirmAmountIfNeeded() {
@@ -808,6 +1343,104 @@ function calculateProjectedBalance(formValues, editingId) {
     - (Number(currentBet.payout) || 0)
     - nextAmount
     + nextPayout;
+}
+
+function updateGeneratedPreview() {
+  if (generatedPreview === null) {
+    return;
+  }
+
+  const ticketType = ticketTypeInput.value;
+  const amountPerPoint = Number(amountInput.value) || 0;
+  const combinations = previewBuildCombinations();
+  const totalAmountValue = combinations.length * amountPerPoint;
+
+  generatedCount.textContent = String(combinations.length);
+  generatedTotalAmount.textContent = formatYen(totalAmountValue);
+  generatedWarning.textContent = "";
+
+  if (!ticketType || combinations.length === 0) {
+    generatedPreview.innerHTML = '<p class="horse-number-placeholder">券種と馬番を選ぶと、生成される買い目が表示されます。</p>';
+  } else {
+    generatedPreview.innerHTML = "<ul>" + combinations.map(function (combination) {
+      return "<li>" + escapeHtml(combination) + "</li>";
+    }).join("") + "</ul>";
+  }
+
+  if (combinations.length > 100) {
+    generatedWarning.textContent = "生成点数が100点を超えています。登録時に確認します。";
+  } else if (combinations.length > 50) {
+    generatedWarning.textContent = "生成点数が50点を超えています。金額と買い目を確認してください。";
+  }
+}
+
+function previewBuildCombinations() {
+  const ticketType = ticketTypeInput.value;
+  const purchaseMode = getSelectedPurchaseMode();
+
+  if (!ticketType) {
+    return [];
+  }
+
+  if (purchaseMode === "通常" || (purchaseMode === "ながし" && (ticketType === "単勝" || ticketType === "複勝"))) {
+    const inputs = Array.from(horseNumberFields.querySelectorAll(".horse-number-input"));
+    const values = inputs.map(function (input) {
+      return String(input.value || "").trim();
+    });
+
+    if (values.length === 0 || values.some(function (value) {
+      return !isValidHorseNumber(value);
+    }) || new Set(values).size !== values.length) {
+      return [];
+    }
+
+    return [normalizeCombinationForTicketType(ticketType, values.join("-"))];
+  }
+
+  if (purchaseMode === "ながし" && ticketType === "三連単") {
+    return [];
+  }
+
+  let combinations = [];
+
+  if (purchaseMode === "ながし") {
+    combinations = buildFlowCombinations(ticketType);
+  } else if (purchaseMode === "ボックス") {
+    combinations = buildBoxCombinations(ticketType);
+  } else if (purchaseMode === "フォーメーション") {
+    combinations = buildFormationCombinations(ticketType);
+  }
+
+  return uniqueCombinations(combinations, ticketType);
+}
+
+function findExistingDuplicateCombinations(combinations) {
+  const date = dateInput.value;
+  const place = placeInput.value.trim();
+  const race = normalizeRaceNumber(raceInput.value);
+  const ticketType = ticketTypeInput.value;
+  const duplicateMap = {};
+
+  bets.forEach(function (bet) {
+    if (bet.date !== date || bet.place !== place || normalizeRaceNumber(bet.race) !== race || bet.ticketType !== ticketType) {
+      return;
+    }
+
+    duplicateMap[normalizeCombinationForTicketType(ticketType, bet.betNumbers)] = true;
+  });
+
+  return combinations.filter(function (combination) {
+    return duplicateMap[normalizeCombinationForTicketType(ticketType, combination)];
+  });
+}
+
+function ensurePurchaseModeAllowed() {
+  const ticketType = ticketTypeInput.value;
+  const purchaseMode = getSelectedPurchaseMode();
+
+  if ((ticketType === "単勝" || ticketType === "複勝") && (purchaseMode === "ながし" || purchaseMode === "フォーメーション")) {
+    setSelectedPurchaseMode("通常");
+  }
 }
 
 function fillHorseNumberInputs(bet) {
@@ -845,6 +1478,7 @@ function setFormModeNew() {
   statusInput.value = "未確定";
   payoutInput.value = 0;
   updateFormPayoutState();
+  updateGeneratedPreview();
 }
 
 function setFormModeEdit(bet) {
@@ -852,6 +1486,7 @@ function setFormModeEdit(bet) {
   cancelEditButton.style.display = "inline-block";
   editOnlyFields.style.display = "grid";
   editMessage.textContent = "編集中：" + (bet.date || "") + " " + (bet.place || "") + " " + (bet.race || "");
+  updateGeneratedPreview();
 }
 
 function ensureSelectHasOption(select, value) {
@@ -1178,6 +1813,8 @@ function createCsvText(targetBets) {
     "race",
     "betType",
     "combination",
+    "purchaseMode",
+    "generatedGroupId",
     "amount",
     "status",
     "payout",
@@ -1199,6 +1836,8 @@ function createCsvText(targetBets) {
       bet.race,
       bet.ticketType,
       bet.betNumbers,
+      normalizePurchaseMode(bet.purchaseMode),
+      bet.generatedGroupId || "",
       amount,
       bet.status,
       payout,
@@ -1916,6 +2555,7 @@ function updateAnalysisDashboard(targetBets) {
   renderAnalysisTable(analysisDateTable, createDateAnalysisRows(targetBets), "日付");
   renderAnalysisTable(analysisPlaceTable, createSingleKeyAnalysisRows(targetBets, "place", "未入力"), "競馬場");
   renderAnalysisTable(analysisTagTable, createTagAnalysisRows(targetBets), "タグ");
+  renderAnalysisTable(analysisPurchaseModeTable, createPurchaseModeAnalysisRows(targetBets), "買い方");
   renderRankingList(analysisTicketRanking, createSingleKeyAnalysisRows(targetBets, "ticketType", "未入力"));
   renderRankingList(analysisPlaceRanking, createSingleKeyAnalysisRows(targetBets, "place", "未入力"));
   renderRankingList(analysisTagRanking, createTagAnalysisRows(targetBets));
@@ -2026,6 +2666,24 @@ function createTagAnalysisRows(targetBets) {
     return summaries[name];
   }).sort(function (a, b) {
     return a.name.localeCompare(b.name, "ja");
+  });
+}
+
+function createPurchaseModeAnalysisRows(targetBets) {
+  const summaries = {};
+
+  PURCHASE_MODES.forEach(function (purchaseMode) {
+    summaries[purchaseMode] = createEmptyAnalysisStats(purchaseMode);
+  });
+
+  targetBets.forEach(function (bet) {
+    const purchaseMode = normalizePurchaseMode(bet.purchaseMode);
+    addBetToAnalysisStats(summaries[purchaseMode], bet);
+  });
+
+  return PURCHASE_MODES.map(function (purchaseMode) {
+    finishAnalysisStats(summaries[purchaseMode]);
+    return summaries[purchaseMode];
   });
 }
 

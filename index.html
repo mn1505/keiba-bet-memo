@@ -134,6 +134,17 @@
             </select>
           </label>
 
+          <fieldset class="purchase-mode-section">
+            <legend>買い方</legend>
+            <div id="purchase-mode-options" class="segment-options" role="radiogroup" aria-label="買い方">
+              <label><input type="radio" name="purchase-mode" value="通常" checked>通常</label>
+              <label><input type="radio" name="purchase-mode" value="ながし">ながし</label>
+              <label><input type="radio" name="purchase-mode" value="ボックス">ボックス</label>
+              <label><input type="radio" name="purchase-mode" value="フォーメーション">フォーメーション</label>
+            </div>
+            <p id="purchase-mode-note" class="form-note"></p>
+          </fieldset>
+
           <fieldset class="horse-number-section">
             <legend>馬番</legend>
             <div id="horse-number-fields" class="horse-number-fields"></div>
@@ -161,8 +172,20 @@
             <p id="bet-numbers-error" class="form-error" aria-live="polite"></p>
           </fieldset>
 
-          <label>
-            金額
+          <fieldset class="generated-preview-section">
+            <legend>生成プレビュー</legend>
+            <div class="generated-total-row">
+              <span>生成点数：<strong id="generated-count">0</strong>点</span>
+              <span>合計購入金額：<strong id="generated-total-amount">0</strong>円</span>
+            </div>
+            <div id="generated-preview" class="generated-preview">
+              <p class="horse-number-placeholder">券種と馬番を選ぶと、生成される買い目が表示されます。</p>
+            </div>
+            <p id="generated-warning" class="form-error" aria-live="polite"></p>
+          </fieldset>
+
+          <label id="amount-label">
+            1点あたり金額
             <input type="number" id="amount" min="0" step="1" placeholder="例：1000" required>
           </label>
         </div>
@@ -337,6 +360,26 @@
                   </tr>
                 </thead>
                 <tbody id="analysis-tag-table"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="analysis-panel" aria-labelledby="analysis-mode-title">
+            <h3 id="analysis-mode-title">買い方別成績</h3>
+            <div class="table-scroll">
+              <table class="analysis-table">
+                <thead>
+                  <tr>
+                    <th>買い方</th>
+                    <th>件数</th>
+                    <th>購入金額</th>
+                    <th>払戻金</th>
+                    <th>収支</th>
+                    <th>回収率</th>
+                    <th>的中率</th>
+                  </tr>
+                </thead>
+                <tbody id="analysis-purchase-mode-table"></tbody>
               </table>
             </div>
           </section>
