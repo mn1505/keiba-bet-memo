@@ -1,0 +1,32 @@
+[
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "単勝",
+    "combination": "7",
+    "payout": 320
+  },
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "ワイド",
+    "combination": "7-13",
+    "payout": 680
+  },
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "馬連",
+    "combination": "7-13",
+    "payout": 1420
+  },
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "馬単",
+    "combination": "7→13",
+    "payout": 2540
+  },
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "三連複",
+    "combination": "7-13-15",
+    "payout": 4860
+  }
+]
