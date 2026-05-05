@@ -1,8 +1,9 @@
 const STORAGE_KEY = "keibaBetMemoList";
 const SIMULATION_STORAGE_KEY = "keibaBetMemoSimulationSettings";
 const IMPORT_HISTORY_STORAGE_KEY = "keibaBetMemoResultImportHistory";
+const LAST_IMPORT_SNAPSHOT_STORAGE_KEY = "bakenoni_last_import_snapshot";
 const APP_NAME = "keiba-bet-memo";
-const APP_VERSION = "v12.8";
+const APP_VERSION = "v12.9";
 const DEFAULT_INITIAL_FUND = 100000;
 const RACE_OPTIONS = ["1R", "2R", "3R", "4R", "5R", "6R", "7R", "8R", "9R", "10R", "11R", "12R"];
 const TICKET_TYPES = ["単勝", "複勝", "ワイド", "馬連", "馬単", "三連複", "三連単"];
@@ -100,6 +101,9 @@ const resultImportFileInput = document.getElementById("result-import-file");
 const readResultImportButton = document.getElementById("read-result-import");
 const applyResultImportButton = document.getElementById("apply-result-import");
 const markRaceMissButton = document.getElementById("mark-race-miss");
+const overwriteResultImportInput = document.getElementById("overwrite-result-import");
+const undoResultImportButton = document.getElementById("undo-result-import");
+const undoResultImportStatus = document.getElementById("undo-result-import-status");
 const resultImportMessage = document.getElementById("result-import-message");
 const resultImportPreview = document.getElementById("result-import-preview");
 const resultImportHistoryList = document.getElementById("result-import-history-list");
@@ -261,6 +265,12 @@ exportCsvButton.addEventListener("click", exportVisibleBetsToCsv);
 readResultImportButton.addEventListener("click", readResultImportFile);
 applyResultImportButton.addEventListener("click", applyResultImport);
 markRaceMissButton.addEventListener("click", markPendingBetsAsMissForImportedRaces);
+overwriteResultImportInput.addEventListener("change", function () {
+  if (currentResultImportPreview !== null) {
+    renderResultImportPreview(currentResultImportPreview);
+  }
+});
+undoResultImportButton.addEventListener("click", undoLastResultImport);
 exportBackupButton.addEventListener("click", exportBackupJson);
 restoreBackupButton.addEventListener("click", restoreBackupJson);
 ticketTypeInput.addEventListener("change", function () {
@@ -430,6 +440,7 @@ function renderBets() {
   updateDynamicFilterOptions();
   clearCsvMessage();
   renderResultImportHistory();
+  updateUndoResultImportState();
 
   const filteredBets = getFilteredBets();
 
@@ -2110,13 +2121,16 @@ function createResultImportPreview(importedResults, fileName) {
   const raceIds = Array.from(new Set(importedResults.map(function (result) {
     return result.raceId;
   }))).sort();
-  const unmatchedResults = [];
+  const resultCountsByRaceId = countResultsByRaceId(importedResults);
+  const purchaseCountsByRaceId = countBetsByRaceId(bets);
+  const matchedRows = [];
+  const unmatchedRows = [];
 
   importedResults.forEach(function (result) {
     resultMap[createResultMatchKey(result.raceId, result.betType, result.combination)] = result;
   });
 
-  const matchedBets = bets.filter(function (bet) {
+  bets.filter(function (bet) {
     const key = createResultMatchKey(bet.raceId, bet.ticketType, bet.betNumbers);
     return resultMap[key] !== undefined;
   }).map(function (bet) {
@@ -2124,7 +2138,11 @@ function createResultImportPreview(importedResults, fileName) {
     const result = resultMap[key];
     const reflectedPayout = calculateReflectedPayout(result.payout, bet.amount);
 
-    return {
+    const currentPayout = Number(bet.payout) || 0;
+    const isPending = bet.status === "未確定";
+    const payoutDiff = bet.status === "的中" && currentPayout !== reflectedPayout;
+
+    matchedRows.push({
       betId: bet.id,
       raceId: bet.raceId,
       betType: bet.ticketType,
@@ -2132,8 +2150,14 @@ function createResultImportPreview(importedResults, fileName) {
       amount: Number(bet.amount) || 0,
       resultPayout: result.payout,
       reflectedPayout: reflectedPayout,
-      currentStatus: bet.status
-    };
+      currentStatus: bet.status,
+      currentPayout: currentPayout,
+      importedStatus: "的中",
+      importedPayout: reflectedPayout,
+      decision: isPending ? "反映予定" : "上書き注意",
+      payoutDiff: payoutDiff,
+      warningText: payoutDiff ? "差異あり" : ""
+    });
   });
 
   importedResults.forEach(function (result) {
@@ -2142,20 +2166,118 @@ function createResultImportPreview(importedResults, fileName) {
     });
 
     if (!hasMatchedBet) {
-      unmatchedResults.push(result);
+      unmatchedRows.push({
+        betId: "",
+        raceId: result.raceId,
+        betType: result.betType,
+        combination: result.combination,
+        amount: 0,
+        resultPayout: result.payout,
+        reflectedPayout: 0,
+        currentStatus: "-",
+        currentPayout: 0,
+        importedStatus: "-",
+        importedPayout: 0,
+        decision: "不一致",
+        payoutDiff: false,
+        warningText: "購入記録なし"
+      });
     }
   });
+
+  const previewRows = matchedRows.concat(unmatchedRows).sort(function (a, b) {
+    return (a.raceId + a.betType + a.combination).localeCompare(b.raceId + b.betType + b.combination);
+  });
+  const alreadyResultEnteredCount = matchedRows.filter(function (row) {
+    return row.currentStatus !== "未確定";
+  }).length;
+  const overwriteWarningCount = matchedRows.filter(function (row) {
+    return row.decision === "上書き注意";
+  }).length;
+  const payoutDiffWarningCount = matchedRows.filter(function (row) {
+    return row.payoutDiff;
+  }).length;
+  const appliedCandidateCount = matchedRows.filter(function (row) {
+    return row.decision === "反映予定";
+  }).length;
+  const skippedCount = unmatchedRows.length + overwriteWarningCount;
 
   return {
     fileName: fileName,
     importedResults: importedResults,
     resultCount: importedResults.length,
-    matchedBets: matchedBets,
-    matchedCount: matchedBets.length,
-    hitPlannedCount: matchedBets.length,
-    unmatchedCount: unmatchedResults.length,
-    raceIds: raceIds
+    matchedBets: matchedRows,
+    previewRows: previewRows,
+    matchedCount: matchedRows.length,
+    hitPlannedCount: appliedCandidateCount,
+    unmatchedCount: unmatchedRows.length,
+    skippedCount: skippedCount,
+    alreadyResultEnteredCount: alreadyResultEnteredCount,
+    overwriteWarningCount: overwriteWarningCount,
+    payoutDiffWarningCount: payoutDiffWarningCount,
+    appliedCandidateCount: appliedCandidateCount,
+    raceIds: raceIds,
+    resultCountsByRaceId: resultCountsByRaceId,
+    purchaseCountsByRaceId: purchaseCountsByRaceId,
+    markLostPreview: createMarkLostPreview(importedResults, raceIds)
   };
+}
+
+function countResultsByRaceId(importedResults) {
+  return importedResults.reduce(function (counts, result) {
+    counts[result.raceId] = (counts[result.raceId] || 0) + 1;
+    return counts;
+  }, {});
+}
+
+function countBetsByRaceId(targetBets) {
+  return targetBets.reduce(function (counts, bet) {
+    const raceId = normalizeRaceId(bet.raceId);
+
+    if (raceId !== "") {
+      counts[raceId] = (counts[raceId] || 0) + 1;
+    }
+
+    return counts;
+  }, {});
+}
+
+function createMarkLostPreview(importedResults, raceIds) {
+  const resultKeys = {};
+  const raceIdSet = new Set(raceIds);
+  const summary = {
+    raceIds: raceIds,
+    pendingCount: 0,
+    changeCount: 0,
+    hitCount: 0,
+    lostCount: 0
+  };
+
+  importedResults.forEach(function (result) {
+    resultKeys[createResultMatchKey(result.raceId, result.betType, result.combination)] = true;
+  });
+
+  bets.forEach(function (bet) {
+    const key = createResultMatchKey(bet.raceId, bet.ticketType, bet.betNumbers);
+
+    if (!raceIdSet.has(bet.raceId)) {
+      return;
+    }
+
+    if (bet.status === "未確定") {
+      summary.pendingCount += 1;
+
+      if (!resultKeys[key]) {
+        summary.changeCount += 1;
+      }
+    } else if (bet.status === "的中") {
+      summary.hitCount += 1;
+    } else if (bet.status === "不的中") {
+      summary.lostCount += 1;
+    }
+  });
+
+  return summary;
 }
 
 function calculateReflectedPayout(resultPayout, amount) {
@@ -2163,7 +2285,10 @@ function calculateReflectedPayout(resultPayout, amount) {
 }
 
 function renderResultImportPreview(preview) {
-  applyResultImportButton.disabled = preview === null || preview.matchedCount === 0;
+  const overwriteEnabled = overwriteResultImportInput.checked;
+  const applyTargetCount = preview === null ? 0 : getResultImportApplyRows(preview, overwriteEnabled).length;
+
+  applyResultImportButton.disabled = preview === null || applyTargetCount === 0;
   markRaceMissButton.disabled = preview === null || preview.raceIds.length === 0;
 
   if (preview === null) {
@@ -2174,47 +2299,88 @@ function renderResultImportPreview(preview) {
   const raceIdsHtml = preview.raceIds.map(function (raceId) {
     return '<span class="tag-chip">' + escapeHtml(raceId) + "</span>";
   }).join("");
-  const matchedRowsHtml = preview.matchedBets.length === 0
-    ? '<tr><td colspan="7" class="empty-table-cell">的中予定の購入記録はありません。</td></tr>'
-    : preview.matchedBets.map(function (matchedBet) {
+  const raceSummaryRowsHtml = preview.raceIds.map(function (raceId) {
+    const resultCount = preview.resultCountsByRaceId[raceId] || 0;
+    const purchaseCount = preview.purchaseCountsByRaceId[raceId] || 0;
+    const className = purchaseCount > 0 ? "import-row-apply" : "import-row-skip";
+
+    return `
+      <tr class="${className}">
+        <td>${escapeHtml(raceId)}</td>
+        <td class="number-cell">${resultCount}件</td>
+        <td class="number-cell">${purchaseCount}件</td>
+        <td>${purchaseCount > 0 ? "購入記録あり" : "購入記録なし"}</td>
+      </tr>
+    `;
+  }).join("");
+  const detailRowsHtml = preview.previewRows.length === 0
+    ? '<tr><td colspan="9" class="empty-table-cell">表示できる明細はありません。</td></tr>'
+    : preview.previewRows.map(function (row) {
+        const rowClass = getImportDecisionClassName(row.decision, row.payoutDiff);
+        const decisionText = row.warningText ? row.decision + "（" + row.warningText + "）" : row.decision;
+
         return `
-          <tr>
-            <td>${escapeHtml(matchedBet.raceId)}</td>
-            <td>${escapeHtml(matchedBet.betType)}</td>
-            <td>${escapeHtml(matchedBet.combination)}</td>
-            <td>${formatYen(matchedBet.amount)}円</td>
-            <td>${formatYen(matchedBet.resultPayout)}円</td>
-            <td>${formatYen(matchedBet.reflectedPayout)}円</td>
-            <td>${escapeHtml(matchedBet.currentStatus)}</td>
+          <tr class="${rowClass}">
+            <td>${escapeHtml(row.raceId)}</td>
+            <td>${escapeHtml(row.betType)}</td>
+            <td>${escapeHtml(row.combination)}</td>
+            <td>${escapeHtml(row.currentStatus)}</td>
+            <td class="number-cell">${row.currentStatus === "-" ? "-" : formatYen(row.currentPayout) + "円"}</td>
+            <td>${escapeHtml(row.importedStatus)}</td>
+            <td class="number-cell">${row.importedStatus === "-" ? "-" : formatYen(row.importedPayout) + "円"}</td>
+            <td class="number-cell">${formatYen(row.resultPayout)}円</td>
+            <td>${escapeHtml(decisionText)}</td>
           </tr>
         `;
       }).join("");
-  const matchedMobileHtml = preview.matchedBets.length === 0
-    ? '<p class="analysis-mobile-empty">的中予定の購入記録はありません。</p>'
-    : preview.matchedBets.map(function (matchedBet) {
+  const detailMobileHtml = preview.previewRows.length === 0
+    ? '<p class="analysis-mobile-empty">表示できる明細はありません。</p>'
+    : preview.previewRows.map(function (row) {
+        const rowClass = getImportDecisionClassName(row.decision, row.payoutDiff);
+        const decisionText = row.warningText ? row.decision + "（" + row.warningText + "）" : row.decision;
+
         return `
-          <article class="analysis-mobile-item">
-            <h4>${escapeHtml(matchedBet.raceId)}</h4>
+          <article class="analysis-mobile-item ${rowClass}">
+            <h4>${escapeHtml(row.raceId)}</h4>
             <dl>
-              <div><dt>券種</dt><dd>${escapeHtml(matchedBet.betType)}</dd></div>
-              <div><dt>買い目</dt><dd>${escapeHtml(matchedBet.combination)}</dd></div>
-              <div><dt>購入金額</dt><dd>${formatYen(matchedBet.amount)}円</dd></div>
-              <div><dt>100円払戻</dt><dd>${formatYen(matchedBet.resultPayout)}円</dd></div>
-              <div><dt>反映払戻</dt><dd>${formatYen(matchedBet.reflectedPayout)}円</dd></div>
-              <div><dt>現在結果</dt><dd>${escapeHtml(matchedBet.currentStatus)}</dd></div>
+              <div><dt>券種</dt><dd>${escapeHtml(row.betType)}</dd></div>
+              <div><dt>買い目</dt><dd>${escapeHtml(row.combination)}</dd></div>
+              <div><dt>現在結果</dt><dd>${escapeHtml(row.currentStatus)}</dd></div>
+              <div><dt>現在払戻</dt><dd>${row.currentStatus === "-" ? "-" : formatYen(row.currentPayout) + "円"}</dd></div>
+              <div><dt>取込後結果</dt><dd>${escapeHtml(row.importedStatus)}</dd></div>
+              <div><dt>取込後払戻</dt><dd>${row.importedStatus === "-" ? "-" : formatYen(row.importedPayout) + "円"}</dd></div>
+              <div><dt>判定</dt><dd>${escapeHtml(decisionText)}</dd></div>
             </dl>
           </article>
         `;
       }).join("");
+  const markLost = preview.markLostPreview;
 
   resultImportPreview.innerHTML = `
     <div class="import-preview-grid">
-      <div><span>読込件数</span><strong>${preview.resultCount}件</strong></div>
-      <div><span>照合できた購入記録</span><strong>${preview.matchedCount}件</strong></div>
+      <div><span>ファイル名</span><strong>${escapeHtml(preview.fileName)}</strong></div>
+      <div><span>JSON内の結果データ</span><strong>${preview.resultCount}件</strong></div>
+      <div><span>購入記録と一致</span><strong>${preview.matchedCount}件</strong></div>
       <div><span>的中予定</span><strong>${preview.hitPlannedCount}件</strong></div>
-      <div><span>不一致</span><strong>${preview.unmatchedCount}件</strong></div>
+      <div><span>反映対象外</span><strong>${preview.skippedCount}件</strong></div>
+      <div><span>結果入力済み</span><strong>${preview.alreadyResultEnteredCount}件</strong></div>
+      <div><span>上書き注意</span><strong>${preview.overwriteWarningCount}件</strong></div>
+      <div><span>払戻差異警告</span><strong>${preview.payoutDiffWarningCount}件</strong></div>
     </div>
     <div class="import-race-list" aria-label="対象raceId一覧">${raceIdsHtml}</div>
+    <div class="table-scroll">
+      <table class="analysis-table result-import-race-table">
+        <thead>
+          <tr>
+            <th>raceId</th>
+            <th>結果データ</th>
+            <th>購入記録</th>
+            <th>状態</th>
+          </tr>
+        </thead>
+        <tbody>${raceSummaryRowsHtml}</tbody>
+      </table>
+    </div>
     <div class="table-scroll">
       <table class="analysis-table result-import-table">
         <thead>
@@ -2222,17 +2388,45 @@ function renderResultImportPreview(preview) {
             <th>raceId</th>
             <th>券種</th>
             <th>買い目</th>
-            <th>購入金額</th>
+            <th>現在ステータス</th>
+            <th>現在払戻</th>
+            <th>取込後ステータス</th>
+            <th>取込後払戻</th>
             <th>100円払戻</th>
-            <th>反映払戻</th>
-            <th>現在結果</th>
+            <th>判定</th>
           </tr>
         </thead>
-        <tbody>${matchedRowsHtml}</tbody>
+        <tbody>${detailRowsHtml}</tbody>
       </table>
     </div>
-    <div class="analysis-mobile-list result-import-mobile-list">${matchedMobileHtml}</div>
+    <div class="analysis-mobile-list result-import-mobile-list">${detailMobileHtml}</div>
+    <div class="import-mark-lost-preview">
+      <h3>不的中一括反映プレビュー</h3>
+      <div class="import-preview-grid">
+        <div><span>対象raceId</span><strong>${markLost.raceIds.length}件</strong></div>
+        <div><span>未確定</span><strong>${markLost.pendingCount}件</strong></div>
+        <div><span>不的中に変更</span><strong>${markLost.changeCount}件</strong></div>
+        <div><span>すでに的中</span><strong>${markLost.hitCount}件</strong></div>
+        <div><span>すでに不的中</span><strong>${markLost.lostCount}件</strong></div>
+      </div>
+    </div>
   `;
+}
+
+function getImportDecisionClassName(decision, payoutDiff) {
+  if (payoutDiff) {
+    return "import-row-danger";
+  }
+
+  if (decision === "反映予定") {
+    return "import-row-apply";
+  }
+
+  if (decision === "上書き注意") {
+    return "import-row-warning";
+  }
+
+  return "import-row-skip";
 }
 
 function applyResultImport() {
@@ -2241,14 +2435,51 @@ function applyResultImport() {
     return;
   }
 
+  const overwriteEnabled = overwriteResultImportInput.checked;
+  const applyRows = getResultImportApplyRows(currentResultImportPreview, overwriteEnabled);
+
+  if (applyRows.length === 0) {
+    showResultImportMessage("反映対象がありません。結果入力済みを反映する場合は上書きチェックを入れてください。", true);
+    return;
+  }
+
+  if (overwriteEnabled) {
+    const overwrittenCount = applyRows.filter(function (row) {
+      return row.currentStatus !== "未確定";
+    }).length;
+
+    if (overwrittenCount > 0 && !window.confirm("結果入力済みの購入記録" + overwrittenCount + "件を上書きします。実行しますか？")) {
+      return;
+    }
+  }
+
+  const message = overwriteEnabled
+    ? applyRows.length + "件の結果を反映します。実行前スナップショットを保存して続行しますか？"
+    : applyRows.length + "件の未確定購入記録に結果を反映します。実行前スナップショットを保存して続行しますか？";
+
+  if (!window.confirm(message)) {
+    return;
+  }
+
+  saveLastImportSnapshot({
+    reason: "result-import",
+    fileName: currentResultImportPreview.fileName,
+    raceIds: currentResultImportPreview.raceIds
+  });
+
   const nowText = new Date().toISOString();
   let appliedCount = 0;
+  let overwrittenCount = 0;
 
-  currentResultImportPreview.matchedBets.forEach(function (matchedBet) {
+  applyRows.forEach(function (matchedBet) {
     const bet = findBet(matchedBet.betId);
 
     if (bet === undefined) {
       return;
+    }
+
+    if (bet.status !== "未確定") {
+      overwrittenCount += 1;
     }
 
     bet.status = "的中";
@@ -2257,12 +2488,30 @@ function applyResultImport() {
     appliedCount += 1;
   });
 
-  addResultImportHistory(currentResultImportPreview, appliedCount);
+  addResultImportHistory(currentResultImportPreview, {
+    appliedCount: appliedCount,
+    overwrittenCount: overwrittenCount,
+    unmatchedMarkedLostCount: 0,
+    action: "result-import",
+    snapshotCreated: true
+  });
   saveBets();
   saveResultImportHistory();
+  currentResultImportPreview = createResultImportPreview(currentResultImportPreview.importedResults, currentResultImportPreview.fileName);
+  overwriteResultImportInput.checked = false;
   renderBets();
   renderResultImportPreview(currentResultImportPreview);
   showResultImportMessage(appliedCount + "件の結果を反映しました。", false);
+}
+
+function getResultImportApplyRows(preview, overwriteEnabled) {
+  return preview.matchedBets.filter(function (row) {
+    if (row.currentStatus === "未確定") {
+      return true;
+    }
+
+    return overwriteEnabled;
+  });
 }
 
 function markPendingBetsAsMissForImportedRaces() {
@@ -2271,9 +2520,26 @@ function markPendingBetsAsMissForImportedRaces() {
     return;
   }
 
-  if (!window.confirm("対象raceIdの未確定購入記録を、結果データと一致しないものだけ不的中にします。実行しますか？")) {
+  const markLost = currentResultImportPreview.markLostPreview;
+  const confirmMessage = [
+    "対象raceIdの未確定購入記録を、結果データと一致しないものだけ不的中にします。",
+    "対象raceId：" + markLost.raceIds.join(", "),
+    "未確定：" + markLost.pendingCount + "件",
+    "不的中に変更：" + markLost.changeCount + "件",
+    "すでに的中：" + markLost.hitCount + "件",
+    "すでに不的中：" + markLost.lostCount + "件",
+    "実行前スナップショットを保存して続行しますか？"
+  ].join("\n");
+
+  if (!window.confirm(confirmMessage)) {
     return;
   }
+
+  saveLastImportSnapshot({
+    reason: "mark-unmatched-lost",
+    fileName: currentResultImportPreview.fileName,
+    raceIds: currentResultImportPreview.raceIds
+  });
 
   const resultKeys = {};
   const raceIdSet = new Set(currentResultImportPreview.raceIds);
@@ -2298,35 +2564,65 @@ function markPendingBetsAsMissForImportedRaces() {
   });
 
   saveBets();
+  addResultImportHistory(currentResultImportPreview, {
+    appliedCount: 0,
+    overwrittenCount: 0,
+    unmatchedMarkedLostCount: changedCount,
+    action: "mark-unmatched-lost",
+    snapshotCreated: true
+  });
+  saveResultImportHistory();
   renderBets();
+  currentResultImportPreview = createResultImportPreview(currentResultImportPreview.importedResults, currentResultImportPreview.fileName);
+  renderResultImportPreview(currentResultImportPreview);
   showResultImportMessage(changedCount + "件の未確定購入記録を不的中にしました。", false);
 }
 
-function addResultImportHistory(preview, appliedCount) {
+function addResultImportHistory(preview, summary) {
+  summary = summary || {};
+
   resultImportHistory.unshift({
+    importId: createImportId(),
     importedAt: new Date().toISOString(),
     fileName: preview.fileName,
+    raceIds: preview.raceIds,
     resultCount: preview.resultCount,
     matchedCount: preview.matchedCount,
-    appliedCount: appliedCount,
-    raceIds: preview.raceIds
+    appliedCount: Number(summary.appliedCount) || 0,
+    skippedCount: preview.skippedCount,
+    overwriteWarningCount: preview.overwriteWarningCount,
+    overwrittenCount: Number(summary.overwrittenCount) || 0,
+    unmatchedMarkedLostCount: Number(summary.unmatchedMarkedLostCount) || 0,
+    snapshotCreated: summary.snapshotCreated === true,
+    action: summary.action || "result-import"
   });
 
   resultImportHistory = resultImportHistory.slice(0, 20);
+}
+
+function createImportId() {
+  return "imp-" + Date.now() + "-" + Math.floor(Math.random() * 100000);
 }
 
 function normalizeResultImportHistoryItem(historyItem) {
   historyItem = historyItem || {};
 
   return {
+    importId: historyItem.importId || "",
     importedAt: historyItem.importedAt || "",
     fileName: historyItem.fileName || "",
+    raceIds: Array.isArray(historyItem.raceIds) ? historyItem.raceIds.map(normalizeRaceId).filter(function (raceId) {
+      return raceId !== "";
+    }) : [],
     resultCount: Number(historyItem.resultCount) || 0,
     matchedCount: Number(historyItem.matchedCount) || 0,
     appliedCount: Number(historyItem.appliedCount) || 0,
-    raceIds: Array.isArray(historyItem.raceIds) ? historyItem.raceIds.map(normalizeRaceId).filter(function (raceId) {
-      return raceId !== "";
-    }) : []
+    skippedCount: Number(historyItem.skippedCount) || 0,
+    overwriteWarningCount: Number(historyItem.overwriteWarningCount) || 0,
+    overwrittenCount: Number(historyItem.overwrittenCount) || 0,
+    unmatchedMarkedLostCount: Number(historyItem.unmatchedMarkedLostCount) || 0,
+    snapshotCreated: historyItem.snapshotCreated === true,
+    action: historyItem.action || "result-import"
   };
 }
 
@@ -2345,11 +2641,138 @@ function renderResultImportHistory() {
           <div><dt>結果</dt><dd>${historyItem.resultCount}件</dd></div>
           <div><dt>照合</dt><dd>${historyItem.matchedCount}件</dd></div>
           <div><dt>反映</dt><dd>${historyItem.appliedCount}件</dd></div>
+          <div><dt>対象外</dt><dd>${historyItem.skippedCount}件</dd></div>
+          <div><dt>上書き注意</dt><dd>${historyItem.overwriteWarningCount}件</dd></div>
+          <div><dt>上書き</dt><dd>${historyItem.overwrittenCount}件</dd></div>
+          <div><dt>不的中一括</dt><dd>${historyItem.unmatchedMarkedLostCount}件</dd></div>
+          <div><dt>スナップショット</dt><dd>${historyItem.snapshotCreated ? "あり" : "なし"}</dd></div>
+          <div><dt>種別</dt><dd>${escapeHtml(getImportHistoryActionLabel(historyItem.action))}</dd></div>
         </dl>
         <p class="history-race-ids">${escapeHtml(historyItem.raceIds.join(", ") || "raceIdなし")}</p>
       </article>
     `;
   }).join("");
+}
+
+function getImportHistoryActionLabel(action) {
+  if (action === "mark-unmatched-lost") {
+    return "不的中一括";
+  }
+
+  if (action === "undo") {
+    return "取り消し済み";
+  }
+
+  return "結果取込";
+}
+
+function saveLastImportSnapshot(options) {
+  const snapshot = {
+    createdAt: new Date().toISOString(),
+    reason: options.reason,
+    fileName: options.fileName || "",
+    raceIds: Array.isArray(options.raceIds) ? options.raceIds : [],
+    data: {
+      bets: bets.map(function (bet) {
+        return normalizeBet(bet);
+      }),
+      simulation: normalizeSimulationSettings(simulationSettings),
+      resultImportHistory: resultImportHistory.map(normalizeResultImportHistoryItem)
+    }
+  };
+
+  localStorage.setItem(LAST_IMPORT_SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshot));
+  updateUndoResultImportState();
+}
+
+function loadLastImportSnapshot() {
+  const savedSnapshot = localStorage.getItem(LAST_IMPORT_SNAPSHOT_STORAGE_KEY);
+
+  if (savedSnapshot === null) {
+    return null;
+  }
+
+  try {
+    const snapshot = JSON.parse(savedSnapshot);
+
+    if (snapshot === null || typeof snapshot !== "object" || !snapshot.data || !Array.isArray(snapshot.data.bets)) {
+      return null;
+    }
+
+    return {
+      createdAt: snapshot.createdAt || "",
+      reason: snapshot.reason || "",
+      fileName: snapshot.fileName || "",
+      raceIds: Array.isArray(snapshot.raceIds) ? snapshot.raceIds.map(normalizeRaceId).filter(function (raceId) {
+        return raceId !== "";
+      }) : [],
+      data: {
+        bets: snapshot.data.bets,
+        simulation: normalizeSimulationSettings(snapshot.data.simulation),
+        resultImportHistory: Array.isArray(snapshot.data.resultImportHistory)
+          ? snapshot.data.resultImportHistory.map(normalizeResultImportHistoryItem)
+          : []
+      }
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+function updateUndoResultImportState() {
+  const snapshot = loadLastImportSnapshot();
+  const hasSnapshot = snapshot !== null;
+
+  undoResultImportButton.disabled = !hasSnapshot;
+  undoResultImportStatus.textContent = hasSnapshot
+    ? "取り消し可能：" + formatDateTime(snapshot.createdAt) + " " + (snapshot.fileName || "")
+    : "取り消し可能な取込がありません。";
+}
+
+function undoLastResultImport() {
+  const snapshot = loadLastImportSnapshot();
+
+  if (snapshot === null) {
+    showResultImportMessage("取り消し可能な取込がありません。", true);
+    updateUndoResultImportState();
+    return;
+  }
+
+  if (!window.confirm("直前の結果取込前の状態に戻します。購入記録、初期資金、取り込み履歴を復元しますか？")) {
+    return;
+  }
+
+  const usedIds = createUsedIdSet([]);
+  bets = snapshot.data.bets.map(function (bet) {
+    return normalizeImportedBet(bet, usedIds);
+  });
+  simulationSettings = normalizeSimulationSettings(snapshot.data.simulation);
+  resultImportHistory = snapshot.data.resultImportHistory.map(normalizeResultImportHistoryItem);
+  resultImportHistory.unshift({
+    importId: createImportId(),
+    importedAt: new Date().toISOString(),
+    fileName: snapshot.fileName,
+    raceIds: snapshot.raceIds,
+    resultCount: 0,
+    matchedCount: 0,
+    appliedCount: 0,
+    skippedCount: 0,
+    overwriteWarningCount: 0,
+    overwrittenCount: 0,
+    unmatchedMarkedLostCount: 0,
+    snapshotCreated: false,
+    action: "undo"
+  });
+  resultImportHistory = resultImportHistory.slice(0, 20);
+
+  saveBets();
+  saveSimulationSettings();
+  saveResultImportHistory();
+  localStorage.removeItem(LAST_IMPORT_SNAPSHOT_STORAGE_KEY);
+  currentResultImportPreview = null;
+  renderBets();
+  renderResultImportPreview(null);
+  showResultImportMessage("直前の結果取込を取り消しました。", false);
 }
 
 function showResultImportMessage(message, isError) {

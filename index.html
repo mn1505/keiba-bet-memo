@@ -470,7 +470,16 @@
             <button type="button" id="read-result-import" class="secondary-button">プレビューを作成</button>
             <button type="button" id="apply-result-import" class="primary-button" disabled>結果を反映</button>
             <button type="button" id="mark-race-miss" class="secondary-button" disabled>対象レースの未確定を不的中にする</button>
+            <button type="button" id="undo-result-import" class="secondary-button" disabled>直前の結果取込を取り消す</button>
           </div>
+        </div>
+
+        <div class="result-import-options">
+          <label>
+            <input type="checkbox" id="overwrite-result-import">
+            結果入力済みも上書きする
+          </label>
+          <span id="undo-result-import-status">取り消し可能な取込がありません。</span>
         </div>
 
         <p id="result-import-message" class="result-import-message" aria-live="polite"></p>

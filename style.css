@@ -563,7 +563,7 @@ textarea {
 
 .result-import-buttons {
   display: grid;
-  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
   gap: 10px;
 }
 
@@ -581,6 +581,23 @@ textarea {
 
 .result-import-message.is-error {
   color: #b23b3b;
+}
+
+.result-import-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  align-items: center;
+  margin-top: 10px;
+  color: #4b5565;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.result-import-options label {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
 }
 
 .result-import-preview {
@@ -613,6 +630,7 @@ textarea {
   display: block;
   margin-top: 4px;
   font-size: 18px;
+  overflow-wrap: anywhere;
 }
 
 .import-race-list {
@@ -622,7 +640,37 @@ textarea {
 }
 
 .result-import-table {
-  min-width: 840px;
+  min-width: 1080px;
+}
+
+.result-import-race-table {
+  min-width: 640px;
+}
+
+.import-row-apply {
+  background: #f5fbf7;
+}
+
+.import-row-skip {
+  background: #f7f9fc;
+}
+
+.import-row-warning {
+  background: #fff8df;
+}
+
+.import-row-danger {
+  background: #fff1f1;
+}
+
+.import-mark-lost-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.import-mark-lost-preview h3 {
+  margin: 0;
+  font-size: 16px;
 }
 
 .import-empty {
@@ -1327,12 +1375,17 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .result-import-options {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
   .import-preview-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .import-history-item dl {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .backup-grid,
@@ -2000,6 +2053,7 @@ textarea:focus {
   .filter-grid,
   .fund-controls,
   .result-import-controls,
+  .result-import-options,
   .backup-grid,
   .restore-controls {
     grid-template-columns: 1fr;
@@ -2097,6 +2151,7 @@ textarea:focus {
   .filter-grid,
   .result-import-controls,
   .result-import-buttons,
+  .result-import-options,
   .backup-grid,
   .restore-controls {
     grid-template-columns: 1fr;
