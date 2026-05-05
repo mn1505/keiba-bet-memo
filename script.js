@@ -447,6 +447,7 @@ function renderBets() {
 
   if (filteredBets.length > 0) {
     betList.appendChild(createBetTable(filteredBets));
+    betList.appendChild(createBetMobileList(filteredBets));
   }
 
   updateSummary(filteredBets);
@@ -543,6 +544,68 @@ function createBetRowHtml(bet) {
         </div>
       </td>
     </tr>
+  `;
+}
+
+function createBetMobileList(targetBets) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "bet-mobile-list";
+  wrapper.setAttribute("aria-label", "購入記録スマホ表示");
+  wrapper.innerHTML = targetBets.map(createBetMobileItemHtml).join("");
+
+  return wrapper;
+}
+
+function createBetMobileItemHtml(bet) {
+  const amount = Number(bet.amount) || 0;
+  const payout = Number(bet.payout) || 0;
+  const profit = payout - amount;
+  const profitClass = profit >= 0 ? "plus" : "minus";
+  const tagsText = Array.isArray(bet.tags) && bet.tags.length > 0 ? bet.tags.join(", ") : "なし";
+  const titleParts = [
+    bet.date || "",
+    ((bet.place || "") + (bet.race || "")).trim(),
+    bet.ticketType || "",
+    normalizePurchaseMode(bet.purchaseMode)
+  ].filter(function (part) {
+    return part !== "";
+  });
+
+  return `
+    <article class="bet-mobile-item">
+      <h3>${escapeHtml(titleParts.join("　") || "購入記録")}</h3>
+      <dl class="bet-mobile-details">
+        <div class="bet-mobile-full"><dt>買い目</dt><dd>${escapeHtml(bet.betNumbers || "未入力")}</dd></div>
+        <div><dt>金額</dt><dd>${formatYen(amount)}円</dd></div>
+        <div><dt>結果</dt><dd>
+          <select class="status-select status-${getStatusClassName(bet.status)}" data-id="${bet.id}" aria-label="結果ステータス">
+            <option value="未確定"${bet.status === "未確定" ? " selected" : ""}>未確定</option>
+            <option value="的中"${bet.status === "的中" ? " selected" : ""}>的中</option>
+            <option value="不的中"${bet.status === "不的中" ? " selected" : ""}>不的中</option>
+          </select>
+        </dd></div>
+        <div><dt>払戻</dt><dd>
+          <input
+            type="number"
+            class="payout-input"
+            data-id="${bet.id}"
+            min="0"
+            step="10"
+            value="${payout}"
+            ${bet.status === "的中" ? "" : "disabled"}
+            aria-label="払戻金"
+          >
+        </dd></div>
+        <div><dt>収支</dt><dd class="${profitClass}">${formatSignedYen(profit)}円</dd></div>
+        <div class="bet-mobile-full"><dt>タグ</dt><dd>${escapeHtml(tagsText)}</dd></div>
+        <div class="bet-mobile-full"><dt>メモ</dt><dd>${escapeHtml(bet.memo || "なし")}</dd></div>
+      </dl>
+      <div class="bet-mobile-actions">
+        <button type="button" class="edit-button" data-id="${bet.id}">編集</button>
+        <button type="button" class="duplicate-button" data-id="${bet.id}">複製</button>
+        <button type="button" class="delete-button" data-id="${bet.id}">削除</button>
+      </div>
+    </article>
   `;
 }
 
@@ -2126,6 +2189,23 @@ function renderResultImportPreview(preview) {
           </tr>
         `;
       }).join("");
+  const matchedMobileHtml = preview.matchedBets.length === 0
+    ? '<p class="analysis-mobile-empty">的中予定の購入記録はありません。</p>'
+    : preview.matchedBets.map(function (matchedBet) {
+        return `
+          <article class="analysis-mobile-item">
+            <h4>${escapeHtml(matchedBet.raceId)}</h4>
+            <dl>
+              <div><dt>券種</dt><dd>${escapeHtml(matchedBet.betType)}</dd></div>
+              <div><dt>買い目</dt><dd>${escapeHtml(matchedBet.combination)}</dd></div>
+              <div><dt>購入金額</dt><dd>${formatYen(matchedBet.amount)}円</dd></div>
+              <div><dt>100円払戻</dt><dd>${formatYen(matchedBet.resultPayout)}円</dd></div>
+              <div><dt>反映払戻</dt><dd>${formatYen(matchedBet.reflectedPayout)}円</dd></div>
+              <div><dt>現在結果</dt><dd>${escapeHtml(matchedBet.currentStatus)}</dd></div>
+            </dl>
+          </article>
+        `;
+      }).join("");
 
   resultImportPreview.innerHTML = `
     <div class="import-preview-grid">
@@ -2151,6 +2231,7 @@ function renderResultImportPreview(preview) {
         <tbody>${matchedRowsHtml}</tbody>
       </table>
     </div>
+    <div class="analysis-mobile-list result-import-mobile-list">${matchedMobileHtml}</div>
   `;
 }
 
@@ -2596,6 +2677,7 @@ function updateSummary(targetBets) {
 
 function updateTicketTypeSummary(targetBets) {
   const ticketSummaries = createTicketTypeSummaries(targetBets);
+  const mobileList = ensureMobileListAfterTable(ticketSummaryList, "ticket-summary-mobile-list");
 
   ticketSummaryList.innerHTML = "";
 
@@ -2603,6 +2685,8 @@ function updateTicketTypeSummary(targetBets) {
     const card = createTicketSummaryCard(summary);
     ticketSummaryList.appendChild(card);
   });
+
+  mobileList.innerHTML = ticketSummaries.map(createAnalysisMobileItemHtml).join("");
 }
 
 function createTicketTypeSummaries(targetBets) {
@@ -2836,8 +2920,11 @@ function finishAnalysisStats(stats) {
 }
 
 function renderAnalysisTable(tableBody, rows, firstHeaderLabel) {
+  const mobileList = ensureMobileListAfterTable(tableBody, "analysis-mobile-list");
+
   if (rows.length === 0) {
     tableBody.innerHTML = '<tr><td colspan="7" class="empty-table-cell">表示できる分析データがありません。</td></tr>';
+    mobileList.innerHTML = '<p class="analysis-mobile-empty">表示できる分析データがありません。</p>';
     return;
   }
 
@@ -2856,6 +2943,45 @@ function renderAnalysisTable(tableBody, rows, firstHeaderLabel) {
       </tr>
     `;
   }).join("");
+  mobileList.innerHTML = rows.map(createAnalysisMobileItemHtml).join("");
+}
+
+function ensureMobileListAfterTable(tableBody, className) {
+  const tableScroll = tableBody.closest(".table-scroll");
+  let mobileList = tableScroll.nextElementSibling;
+
+  if (mobileList === null || !mobileList.classList.contains(className)) {
+    mobileList = document.createElement("div");
+    mobileList.className = className;
+    tableScroll.insertAdjacentElement("afterend", mobileList);
+  }
+
+  return mobileList;
+}
+
+function createAnalysisMobileItemHtml(row) {
+  const profitLossValue = row.profitLoss === undefined ? Number(row.balance) || 0 : Number(row.profitLoss) || 0;
+  const profitClass = profitLossValue >= 0 ? "plus" : "minus";
+  const name = row.name || row.ticketType || "未入力";
+  const count = Number(row.count) || 0;
+  const amountSum = Number(row.amountSum) || 0;
+  const payoutSum = Number(row.payoutSum) || 0;
+  const recoveryRateValue = Number(row.recoveryRate) || 0;
+  const hitRateValue = row.hitRate === undefined ? null : Number(row.hitRate) || 0;
+
+  return `
+    <article class="analysis-mobile-item">
+      <h4>${escapeHtml(name)}</h4>
+      <dl>
+        <div><dt>件数</dt><dd>${count}件</dd></div>
+        <div><dt>購入</dt><dd>${formatYen(amountSum)}円</dd></div>
+        <div><dt>払戻</dt><dd>${formatYen(payoutSum)}円</dd></div>
+        <div><dt>収支</dt><dd class="${profitClass}">${formatSignedYen(profitLossValue)}円</dd></div>
+        <div><dt>回収率</dt><dd>${formatPercent(recoveryRateValue)}</dd></div>
+        ${hitRateValue === null ? "" : "<div><dt>的中率</dt><dd>" + formatPercent(hitRateValue) + "</dd></div>"}
+      </dl>
+    </article>
+  `;
 }
 
 function renderRankingList(listElement, rows) {

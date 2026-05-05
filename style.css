@@ -2029,3 +2029,314 @@ textarea:focus {
     border-bottom: 3px solid #8f9aaa;
   }
 }
+
+@media (min-width: 769px) {
+  .bet-mobile-list,
+  .analysis-mobile-list,
+  .ticket-summary-mobile-list {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    min-width: 0;
+    overflow-x: hidden;
+    font-size: 14px;
+  }
+
+  .app-header {
+    padding: 12px max(10px, env(safe-area-inset-right)) 10px max(10px, env(safe-area-inset-left));
+  }
+
+  .app-header h1 {
+    font-size: 20px;
+  }
+
+  .app-layout {
+    width: 100%;
+    margin: 0;
+  }
+
+  .simulation-section,
+  .form-section,
+  .list-section {
+    padding: 10px max(10px, env(safe-area-inset-right)) 10px max(10px, env(safe-area-inset-left));
+    border-right: 0;
+    border-left: 0;
+  }
+
+  h2 {
+    font-size: 15px;
+  }
+
+  input,
+  select,
+  textarea,
+  .primary-button,
+  .secondary-button,
+  .export-button,
+  .backup-button,
+  .edit-button,
+  .duplicate-button,
+  .delete-button {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  input,
+  select,
+  textarea {
+    padding: 8px 9px;
+  }
+
+  .form-grid,
+  .edit-only-fields,
+  .fund-controls,
+  .fund-buttons,
+  .filter-grid,
+  .result-import-controls,
+  .result-import-buttons,
+  .backup-grid,
+  .restore-controls {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .search-field {
+    grid-column: auto;
+  }
+
+  .simulation-grid,
+  .analysis-basic-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-x: visible;
+  }
+
+  .summary-box {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    border-top: 1px solid #9ca3af;
+    border-left: 1px solid #9ca3af;
+  }
+
+  .summary-box p {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+    margin: 0;
+    padding: 6px 8px;
+    border-right: 1px solid #9ca3af;
+    border-bottom: 1px solid #9ca3af;
+  }
+
+  .summary-box span {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .segment-options,
+  .flow-option-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .segment-options label,
+  .horse-choice-grid label {
+    min-height: 42px;
+  }
+
+  .horse-number-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .horse-selection-groups,
+  .horse-selection-groups-flow,
+  .horse-selection-groups-box,
+  .horse-selection-groups-formation {
+    grid-template-columns: 1fr;
+  }
+
+  .horse-choice-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .generated-total-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .generated-preview {
+    max-height: 220px;
+    overflow-x: hidden;
+  }
+
+  .generated-preview-table,
+  .generated-preview-table tbody,
+  .generated-preview-table tr,
+  .generated-preview-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .generated-preview-table thead {
+    display: none;
+  }
+
+  .generated-preview-table tr {
+    padding: 6px 8px;
+    border-bottom: 1px solid #c5cedb;
+  }
+
+  .generated-preview-table td {
+    padding: 0;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .generated-preview-table td:first-child {
+    color: #657285;
+    font-size: 12px;
+  }
+
+  .filter-header,
+  .list-header {
+    display: grid;
+    gap: 8px;
+  }
+
+  .list-actions {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .bet-list > .bet-table-scroll,
+  .ticket-summary-section > .table-scroll,
+  .analysis-panel > .table-scroll,
+  .result-import-preview > .table-scroll {
+    display: none;
+  }
+
+  .bet-mobile-list,
+  .analysis-mobile-list,
+  .ticket-summary-mobile-list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .bet-mobile-item,
+  .analysis-mobile-item {
+    min-width: 0;
+    padding: 8px;
+    border: 1px solid #9ca3af;
+    border-radius: 0;
+    background: #ffffff;
+    box-shadow: none;
+  }
+
+  .bet-mobile-item h3,
+  .analysis-mobile-item h4 {
+    margin: 0 0 6px;
+    padding: 0 0 4px;
+    border-bottom: 1px solid #c5cedb;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  .bet-mobile-details,
+  .analysis-mobile-item dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    margin: 0;
+    border-top: 1px solid #d1d5db;
+    border-left: 1px solid #d1d5db;
+  }
+
+  .bet-mobile-details div,
+  .analysis-mobile-item dl div {
+    min-width: 0;
+    padding: 6px 7px;
+    border-right: 1px solid #d1d5db;
+    border-bottom: 1px solid #d1d5db;
+    background: #f9fafb;
+  }
+
+  .bet-mobile-details dt,
+  .analysis-mobile-item dt {
+    color: #4b5565;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .bet-mobile-details dd,
+  .analysis-mobile-item dd {
+    min-width: 0;
+    margin: 1px 0 0;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  .bet-mobile-full {
+    grid-column: 1 / -1;
+  }
+
+  .bet-mobile-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .status-select,
+  .payout-input {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+  }
+
+  .analysis-mobile-empty {
+    margin: 0;
+    padding: 8px;
+    border: 1px dashed #9ca3af;
+    color: #657285;
+    background: #f9fafb;
+  }
+
+  .import-preview-grid,
+  .import-history-item dl,
+  .ranking-grid,
+  .record-highlight-list {
+    grid-template-columns: 1fr;
+  }
+
+  .csv-section .export-button,
+  .backup-section .backup-button,
+  .result-import-buttons button,
+  .restore-controls button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .simulation-grid,
+  .analysis-basic-cards,
+  .summary-box,
+  .bet-mobile-details,
+  .analysis-mobile-item dl {
+    grid-template-columns: 1fr;
+  }
+
+  .horse-choice-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .bet-mobile-actions,
+  .segment-options,
+  .flow-option-row {
+    grid-template-columns: 1fr;
+  }
+}
