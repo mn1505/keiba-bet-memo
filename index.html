@@ -78,102 +78,151 @@
       <h2 id="form-title">購入記録を登録</h2>
 
       <form id="bet-form">
-        <div class="form-grid">
-          <label>
-            日付
-            <input type="date" id="date" required>
-          </label>
+        <section class="quick-settings-section" aria-labelledby="quick-settings-title">
+          <h3 id="quick-settings-title">スマホ入力補助設定</h3>
+          <div class="quick-settings-grid">
+            <label class="check-label"><input type="checkbox" id="carry-over-enabled" checked>登録後に直前入力を引き継ぐ</label>
+            <label class="check-label"><input type="checkbox" id="carry-over-memo">メモも引き継ぐ</label>
+            <label class="check-label"><input type="checkbox" id="advance-race-after-submit">登録後に次Rへ進む</label>
+          </div>
+        </section>
 
-          <label>
-            競馬場
-            <select id="place" required>
-              <option value="">競馬場を選択</option>
-              <option value="札幌">札幌</option>
-              <option value="函館">函館</option>
-              <option value="福島">福島</option>
-              <option value="新潟">新潟</option>
-              <option value="東京">東京</option>
-              <option value="中山">中山</option>
-              <option value="中京">中京</option>
-              <option value="京都">京都</option>
-              <option value="阪神">阪神</option>
-              <option value="小倉">小倉</option>
-            </select>
-          </label>
+        <details class="mobile-collapsible-section" id="section-basic" open>
+          <summary>基本情報</summary>
+          <div class="form-grid">
+            <label class="date-field">
+              日付
+              <div class="input-with-buttons">
+                <input type="date" id="date" required>
+                <button type="button" id="set-today" class="quick-button">今日</button>
+              </div>
+            </label>
 
-          <label>
-            レース番号
-            <select id="race" required>
-              <option value="">レースを選択</option>
-              <option value="1R">1R</option>
-              <option value="2R">2R</option>
-              <option value="3R">3R</option>
-              <option value="4R">4R</option>
-              <option value="5R">5R</option>
-              <option value="6R">6R</option>
-              <option value="7R">7R</option>
-              <option value="8R">8R</option>
-              <option value="9R">9R</option>
-              <option value="10R">10R</option>
-              <option value="11R">11R</option>
-              <option value="12R">12R</option>
-            </select>
-          </label>
+            <label>
+              競馬場
+              <select id="place" required>
+                <option value="">競馬場を選択</option>
+                <option value="札幌">札幌</option>
+                <option value="函館">函館</option>
+                <option value="福島">福島</option>
+                <option value="新潟">新潟</option>
+                <option value="東京">東京</option>
+                <option value="中山">中山</option>
+                <option value="中京">中京</option>
+                <option value="京都">京都</option>
+                <option value="阪神">阪神</option>
+                <option value="小倉">小倉</option>
+              </select>
+            </label>
 
-          <label>
-            券種
-            <select id="ticket-type" required>
-              <option value="">選択してください</option>
-              <option value="単勝">単勝</option>
-              <option value="複勝">複勝</option>
-              <option value="ワイド">ワイド</option>
-              <option value="馬連">馬連</option>
-              <option value="馬単">馬単</option>
-              <option value="三連複">三連複</option>
-              <option value="三連単">三連単</option>
-            </select>
-          </label>
+            <label class="race-field">
+              レース番号
+              <div class="input-with-buttons race-step-buttons">
+                <button type="button" id="previous-race" class="quick-button">前R</button>
+                <select id="race" required>
+                  <option value="">レースを選択</option>
+                  <option value="1R">1R</option>
+                  <option value="2R">2R</option>
+                  <option value="3R">3R</option>
+                  <option value="4R">4R</option>
+                  <option value="5R">5R</option>
+                  <option value="6R">6R</option>
+                  <option value="7R">7R</option>
+                  <option value="8R">8R</option>
+                  <option value="9R">9R</option>
+                  <option value="10R">10R</option>
+                  <option value="11R">11R</option>
+                  <option value="12R">12R</option>
+                </select>
+                <button type="button" id="next-race" class="quick-button">次R</button>
+              </div>
+            </label>
 
-          <fieldset class="purchase-mode-section">
-            <legend>買い方</legend>
-            <div id="purchase-mode-options" class="segment-options" role="radiogroup" aria-label="買い方">
-              <label><input type="radio" name="purchase-mode" value="通常" checked>通常</label>
-              <label><input type="radio" name="purchase-mode" value="ながし">ながし</label>
-              <label><input type="radio" name="purchase-mode" value="ボックス">ボックス</label>
-              <label><input type="radio" name="purchase-mode" value="フォーメーション">フォーメーション</label>
-            </div>
-            <p id="purchase-mode-note" class="form-note"></p>
-          </fieldset>
+            <label>
+              券種
+              <select id="ticket-type" required>
+                <option value="">選択してください</option>
+                <option value="単勝">単勝</option>
+                <option value="複勝">複勝</option>
+                <option value="ワイド">ワイド</option>
+                <option value="馬連">馬連</option>
+                <option value="馬単">馬単</option>
+                <option value="三連複">三連複</option>
+                <option value="三連単">三連単</option>
+              </select>
+            </label>
+          </div>
+        </details>
 
-          <fieldset class="horse-number-section">
-            <legend>馬番</legend>
-            <div id="horse-number-fields" class="horse-number-fields"></div>
-            <input type="hidden" id="bet-numbers">
-            <datalist id="horse-number-options">
-              <option value="1"></option>
-              <option value="2"></option>
-              <option value="3"></option>
-              <option value="4"></option>
-              <option value="5"></option>
-              <option value="6"></option>
-              <option value="7"></option>
-              <option value="8"></option>
-              <option value="9"></option>
-              <option value="10"></option>
-              <option value="11"></option>
-              <option value="12"></option>
-              <option value="13"></option>
-              <option value="14"></option>
-              <option value="15"></option>
-              <option value="16"></option>
-              <option value="17"></option>
-              <option value="18"></option>
-            </datalist>
-            <p id="bet-numbers-error" class="form-error" aria-live="polite"></p>
-          </fieldset>
+        <details class="mobile-collapsible-section" id="section-horses" open>
+          <summary>買い方・馬番</summary>
+          <div class="form-grid">
+            <fieldset class="purchase-mode-section">
+              <legend>買い方</legend>
+              <div id="purchase-mode-options" class="segment-options" role="radiogroup" aria-label="買い方">
+                <label><input type="radio" name="purchase-mode" value="通常" checked>通常</label>
+                <label><input type="radio" name="purchase-mode" value="ながし">ながし</label>
+                <label><input type="radio" name="purchase-mode" value="ボックス">ボックス</label>
+                <label><input type="radio" name="purchase-mode" value="フォーメーション">フォーメーション</label>
+              </div>
+              <p id="purchase-mode-note" class="form-note"></p>
+            </fieldset>
 
+            <fieldset class="horse-number-section">
+              <legend>馬番</legend>
+              <div id="horse-number-fields" class="horse-number-fields"></div>
+              <input type="hidden" id="bet-numbers">
+              <datalist id="horse-number-options">
+                <option value="1"></option>
+                <option value="2"></option>
+                <option value="3"></option>
+                <option value="4"></option>
+                <option value="5"></option>
+                <option value="6"></option>
+                <option value="7"></option>
+                <option value="8"></option>
+                <option value="9"></option>
+                <option value="10"></option>
+                <option value="11"></option>
+                <option value="12"></option>
+                <option value="13"></option>
+                <option value="14"></option>
+                <option value="15"></option>
+                <option value="16"></option>
+                <option value="17"></option>
+                <option value="18"></option>
+              </datalist>
+              <p id="bet-numbers-error" class="form-error" aria-live="polite"></p>
+            </fieldset>
+          </div>
+        </details>
+
+        <details class="mobile-collapsible-section" id="section-extra" open>
+          <summary>金額・タグ・メモ</summary>
+          <div class="form-grid">
+            <label id="amount-label">
+              1点あたり金額
+              <input type="number" id="amount" min="0" step="1" placeholder="例：1000" required>
+            </label>
+            <div class="quick-button-row" id="amount-quick-buttons" aria-label="金額クイックボタン"></div>
+
+            <label>
+              タグ
+              <input type="text" id="tags" placeholder="例：本線, 保険, AI予想">
+            </label>
+            <div class="quick-button-row tag-quick-row" id="tag-quick-buttons" aria-label="よく使うタグボタン"></div>
+
+            <label>
+              メモ
+              <textarea id="memo" rows="3" placeholder="例：本命寄り、穴狙い、保険"></textarea>
+            </label>
+          </div>
+        </details>
+
+        <details class="mobile-collapsible-section" id="section-preview" open>
+          <summary>生成プレビュー</summary>
           <fieldset class="generated-preview-section">
-            <legend>生成プレビュー</legend>
+            <legend class="visually-hidden">生成プレビュー</legend>
             <div class="generated-total-row">
               <span>生成点数：<strong id="generated-count">0</strong>点</span>
               <span>合計購入金額：<strong id="generated-total-amount">0</strong>円</span>
@@ -183,22 +232,7 @@
             </div>
             <p id="generated-warning" class="form-error" aria-live="polite"></p>
           </fieldset>
-
-          <label id="amount-label">
-            1点あたり金額
-            <input type="number" id="amount" min="0" step="1" placeholder="例：1000" required>
-          </label>
-        </div>
-
-        <label>
-          メモ
-          <textarea id="memo" rows="3" placeholder="例：本命寄り、穴狙い、保険"></textarea>
-        </label>
-
-        <label>
-          タグ
-          <input type="text" id="tags" placeholder="例：本線, 保険, AI予想">
-        </label>
+        </details>
 
         <div class="form-grid edit-only-fields" id="edit-only-fields">
           <label>
@@ -220,7 +254,20 @@
 
         <div class="form-buttons">
           <button type="submit" id="submit-button" class="primary-button">登録する</button>
+          <button type="button" id="clear-input" class="secondary-button">入力をクリア</button>
           <button type="button" id="cancel-edit" class="secondary-button">編集をキャンセル</button>
+        </div>
+
+        <div class="mobile-submit-bar" aria-label="スマホ登録操作バー">
+          <div>
+            <span>生成点数</span>
+            <strong><span id="sticky-generated-count">0</span>点</strong>
+          </div>
+          <div>
+            <span>合計</span>
+            <strong><span id="sticky-generated-total-amount">0</span>円</strong>
+          </div>
+          <button type="submit" class="primary-button">登録</button>
         </div>
       </form>
     </section>

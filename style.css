@@ -397,6 +397,7 @@ textarea {
 .backup-button,
 .edit-button,
 .duplicate-button,
+.use-as-template-button,
 .delete-button {
   border: 0;
   border-radius: 4px;
@@ -421,6 +422,95 @@ textarea {
   display: none;
 }
 
+.quick-settings-section {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #d6dde8;
+  border-radius: 4px;
+  background: #f8fafc;
+}
+
+.quick-settings-section h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.quick-settings-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-weight: 700;
+}
+
+.check-label input {
+  width: 18px;
+  min-height: 18px;
+}
+
+.mobile-collapsible-section {
+  display: grid;
+  gap: 12px;
+}
+
+.mobile-collapsible-section summary {
+  display: none;
+}
+
+.input-with-buttons {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.race-step-buttons {
+  grid-template-columns: auto 1fr auto;
+}
+
+.quick-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: -6px;
+}
+
+.quick-button {
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid #c5cedb;
+  border-radius: 4px;
+  color: #202938;
+  background: #edf1f6;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quick-button:hover {
+  background: #e1e7ef;
+}
+
+.mobile-submit-bar {
+  display: none;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .primary-button {
   min-height: 48px;
   padding: 12px 16px;
@@ -441,6 +531,18 @@ textarea {
 }
 
 .secondary-button:hover {
+  background: #e1e7ef;
+}
+
+.use-as-template-button {
+  min-height: 32px;
+  padding: 6px 8px;
+  color: #202938;
+  background: #edf1f6;
+  border: 1px solid #c5cedb;
+}
+
+.use-as-template-button:hover {
   background: #e1e7ef;
 }
 
@@ -2133,6 +2235,7 @@ textarea:focus {
   .backup-button,
   .edit-button,
   .duplicate-button,
+  .use-as-template-button,
   .delete-button {
     min-height: 44px;
     font-size: 16px;
@@ -2146,6 +2249,7 @@ textarea:focus {
 
   .form-grid,
   .edit-only-fields,
+  .quick-settings-grid,
   .fund-controls,
   .fund-buttons,
   .filter-grid,
@@ -2227,6 +2331,106 @@ textarea:focus {
   .generated-preview {
     max-height: 220px;
     overflow-x: hidden;
+  }
+
+  .quick-settings-section {
+    padding: 8px;
+    border-radius: 0;
+  }
+
+  .quick-settings-section h3 {
+    font-size: 14px;
+  }
+
+  .check-label {
+    min-height: 40px;
+  }
+
+  .mobile-collapsible-section {
+    display: block;
+    border: 1px solid #9ca3af;
+    border-radius: 0;
+    background: #ffffff;
+  }
+
+  .mobile-collapsible-section summary {
+    display: block;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #c5cedb;
+    color: #202938;
+    background: #edf1f6;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .mobile-collapsible-section:not([open]) summary {
+    border-bottom: 0;
+  }
+
+  .mobile-collapsible-section > .form-grid,
+  .mobile-collapsible-section > .generated-preview-section {
+    padding: 10px;
+  }
+
+  .input-with-buttons,
+  .race-step-buttons {
+    gap: 6px;
+  }
+
+  .input-with-buttons {
+    grid-template-columns: 1fr minmax(72px, auto);
+  }
+
+  .race-step-buttons {
+    grid-template-columns: minmax(64px, auto) 1fr minmax(64px, auto);
+  }
+
+  .quick-button-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 0;
+  }
+
+  .quick-button {
+    min-height: 44px;
+    padding: 8px 6px;
+    font-size: 14px;
+  }
+
+  .mobile-submit-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: minmax(72px, 1fr) minmax(96px, 1fr) minmax(96px, 1.1fr);
+    gap: 6px;
+    align-items: stretch;
+    margin: 4px -10px -10px;
+    padding: 8px max(10px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    border-top: 1px solid #9ca3af;
+    background: #ffffff;
+  }
+
+  .mobile-submit-bar div {
+    display: grid;
+    align-content: center;
+    min-width: 0;
+    padding: 5px 7px;
+    border: 1px solid #c5cedb;
+    background: #f8fafc;
+  }
+
+  .mobile-submit-bar span {
+    color: #4b5565;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .mobile-submit-bar strong {
+    font-size: 15px;
+    overflow-wrap: anywhere;
   }
 
   .generated-preview-table,
@@ -2341,7 +2545,7 @@ textarea:focus {
 
   .bet-mobile-actions {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
     margin-top: 8px;
   }
@@ -2391,7 +2595,12 @@ textarea:focus {
 
   .bet-mobile-actions,
   .segment-options,
-  .flow-option-row {
+  .flow-option-row,
+  .quick-button-row {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-submit-bar {
     grid-template-columns: 1fr;
   }
 }

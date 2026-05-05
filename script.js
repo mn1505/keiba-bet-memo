@@ -1,14 +1,17 @@
 const STORAGE_KEY = "keibaBetMemoList";
 const SIMULATION_STORAGE_KEY = "keibaBetMemoSimulationSettings";
+const MOBILE_INPUT_STORAGE_KEY = "bakenoni_mobile_input_settings_v13";
 const IMPORT_HISTORY_STORAGE_KEY = "keibaBetMemoResultImportHistory";
 const LAST_IMPORT_SNAPSHOT_STORAGE_KEY = "bakenoni_last_import_snapshot";
 const APP_NAME = "keiba-bet-memo";
-const APP_VERSION = "v12.9";
+const APP_VERSION = "v13";
 const DEFAULT_INITIAL_FUND = 100000;
 const RACE_OPTIONS = ["1R", "2R", "3R", "4R", "5R", "6R", "7R", "8R", "9R", "10R", "11R", "12R"];
 const TICKET_TYPES = ["単勝", "複勝", "ワイド", "馬連", "馬単", "三連複", "三連単"];
 const PURCHASE_MODES = ["通常", "ながし", "ボックス", "フォーメーション"];
 const STATUS_TYPES = ["未確定", "的中", "不的中"];
+const QUICK_AMOUNTS = [100, 200, 300, 500, 1000];
+const QUICK_TAGS = ["本線", "保険", "穴狙い", "現地", "AI予想", "自分予想", "ワイド軸", "馬単頭"];
 const TRACK_CODES = {
   "札幌": "SAPPORO",
   "函館": "HAKODATE",
@@ -52,6 +55,17 @@ const generatedWarning = document.getElementById("generated-warning");
 const amountInput = document.getElementById("amount");
 const memoInput = document.getElementById("memo");
 const tagsInput = document.getElementById("tags");
+const setTodayButton = document.getElementById("set-today");
+const previousRaceButton = document.getElementById("previous-race");
+const nextRaceButton = document.getElementById("next-race");
+const amountQuickButtons = document.getElementById("amount-quick-buttons");
+const tagQuickButtons = document.getElementById("tag-quick-buttons");
+const carryOverEnabledInput = document.getElementById("carry-over-enabled");
+const carryOverMemoInput = document.getElementById("carry-over-memo");
+const advanceRaceAfterSubmitInput = document.getElementById("advance-race-after-submit");
+const clearInputButton = document.getElementById("clear-input");
+const stickyGeneratedCount = document.getElementById("sticky-generated-count");
+const stickyGeneratedTotalAmount = document.getElementById("sticky-generated-total-amount");
 const statusInput = document.getElementById("status");
 const payoutInput = document.getElementById("payout");
 const editOnlyFields = document.getElementById("edit-only-fields");
@@ -115,6 +129,7 @@ const backupMessage = document.getElementById("backup-message");
 
 let bets = loadBets();
 let simulationSettings = loadSimulationSettings();
+let mobileInputSettings = loadMobileInputSettings();
 let resultImportHistory = loadResultImportHistory();
 let editingBetId = null;
 let currentResultImportPreview = null;
@@ -125,6 +140,8 @@ let betSortState = {
 
 setToday();
 setSelectValidationMessages();
+renderQuickInputControls();
+applyMobileInputSettingsToForm();
 renderHorseNumberInputs();
 updateGeneratedPreview();
 setFormModeNew();
@@ -135,12 +152,14 @@ betForm.addEventListener("submit", function (event) {
   event.preventDefault();
 
   if (!placeInput.value) {
+    openMobileSection("section-basic");
     placeInput.setCustomValidity("競馬場を選択してください。");
     placeInput.reportValidity();
     return;
   }
 
   if (!raceInput.value) {
+    openMobileSection("section-basic");
     raceInput.setCustomValidity("レース番号を選択してください。");
     raceInput.reportValidity();
     return;
@@ -239,7 +258,11 @@ betForm.addEventListener("submit", function (event) {
   saveBets();
   showSimulationMessage("現在残高を全記録から再計算しました。", false);
   renderBets();
-  resetForm();
+  if (editingBetId === null) {
+    resetFormAfterNewSubmit();
+  } else {
+    resetForm();
+  }
 });
 
 filterDateInput.addEventListener("input", renderBets);
@@ -282,8 +305,37 @@ purchaseModeInputs.forEach(function (input) {
   input.addEventListener("change", renderHorseNumberInputs);
 });
 amountInput.addEventListener("input", updateGeneratedPreview);
+setTodayButton.addEventListener("click", function () {
+  setToday();
+  dateInput.focus();
+});
+previousRaceButton.addEventListener("click", function () {
+  stepRace(-1);
+});
+nextRaceButton.addEventListener("click", function () {
+  stepRace(1);
+});
+amountQuickButtons.addEventListener("click", function (event) {
+  if (!event.target.classList.contains("amount-quick-button")) {
+    return;
+  }
+
+  amountInput.value = event.target.dataset.amount;
+  updateGeneratedPreview();
+});
+tagQuickButtons.addEventListener("click", function (event) {
+  if (!event.target.classList.contains("tag-quick-button")) {
+    return;
+  }
+
+  addTagToInput(event.target.dataset.tag);
+});
+carryOverEnabledInput.addEventListener("change", saveMobileInputSettingsFromForm);
+carryOverMemoInput.addEventListener("change", saveMobileInputSettingsFromForm);
+advanceRaceAfterSubmitInput.addEventListener("change", saveMobileInputSettingsFromForm);
 statusInput.addEventListener("change", updateFormPayoutState);
 cancelEditButton.addEventListener("click", resetForm);
+clearInputButton.addEventListener("click", resetForm);
 saveInitialFundButton.addEventListener("click", saveInitialFundOnly);
 resetAllDataButton.addEventListener("click", resetAllDataAndInitialFund);
 
@@ -323,6 +375,11 @@ betList.addEventListener("click", function (event) {
 
   if (event.target.classList.contains("duplicate-button")) {
     duplicateBet(event.target.dataset.id);
+    return;
+  }
+
+  if (event.target.classList.contains("use-as-template-button")) {
+    useBetAsInputTemplate(event.target.dataset.id);
     return;
   }
 
@@ -418,6 +475,55 @@ function loadSimulationSettings() {
 
 function saveSimulationSettings() {
   localStorage.setItem(SIMULATION_STORAGE_KEY, JSON.stringify(simulationSettings));
+}
+
+function loadMobileInputSettings() {
+  const savedSettings = localStorage.getItem(MOBILE_INPUT_STORAGE_KEY);
+
+  if (savedSettings === null) {
+    return createDefaultMobileInputSettings();
+  }
+
+  try {
+    return normalizeMobileInputSettings(JSON.parse(savedSettings));
+  } catch (error) {
+    return createDefaultMobileInputSettings();
+  }
+}
+
+function saveMobileInputSettings() {
+  localStorage.setItem(MOBILE_INPUT_STORAGE_KEY, JSON.stringify(mobileInputSettings));
+}
+
+function createDefaultMobileInputSettings() {
+  return {
+    carryOverEnabled: true,
+    carryOverMemo: false,
+    advanceRaceAfterSubmit: false
+  };
+}
+
+function normalizeMobileInputSettings(settings) {
+  return {
+    carryOverEnabled: settings && settings.carryOverEnabled === false ? false : true,
+    carryOverMemo: Boolean(settings && settings.carryOverMemo),
+    advanceRaceAfterSubmit: Boolean(settings && settings.advanceRaceAfterSubmit)
+  };
+}
+
+function applyMobileInputSettingsToForm() {
+  carryOverEnabledInput.checked = mobileInputSettings.carryOverEnabled;
+  carryOverMemoInput.checked = mobileInputSettings.carryOverMemo;
+  advanceRaceAfterSubmitInput.checked = mobileInputSettings.advanceRaceAfterSubmit;
+}
+
+function saveMobileInputSettingsFromForm() {
+  mobileInputSettings = normalizeMobileInputSettings({
+    carryOverEnabled: carryOverEnabledInput.checked,
+    carryOverMemo: carryOverMemoInput.checked,
+    advanceRaceAfterSubmit: advanceRaceAfterSubmitInput.checked
+  });
+  saveMobileInputSettings();
 }
 
 function createDefaultSimulationSettings() {
@@ -551,6 +657,7 @@ function createBetRowHtml(bet) {
         <div class="table-actions">
           <button type="button" class="edit-button" data-id="${bet.id}">編集</button>
           <button type="button" class="duplicate-button" data-id="${bet.id}">複製</button>
+          <button type="button" class="use-as-template-button" data-id="${bet.id}">この条件で入力</button>
           <button type="button" class="delete-button" data-id="${bet.id}">削除</button>
         </div>
       </td>
@@ -614,6 +721,7 @@ function createBetMobileItemHtml(bet) {
       <div class="bet-mobile-actions">
         <button type="button" class="edit-button" data-id="${bet.id}">編集</button>
         <button type="button" class="duplicate-button" data-id="${bet.id}">複製</button>
+        <button type="button" class="use-as-template-button" data-id="${bet.id}">この条件で入力</button>
         <button type="button" class="delete-button" data-id="${bet.id}">削除</button>
       </div>
     </article>
@@ -782,6 +890,28 @@ function duplicateBet(id) {
   bets.push(copiedBet);
   saveBets();
   renderBets();
+}
+
+function useBetAsInputTemplate(id) {
+  const sourceBet = findBet(id);
+
+  if (sourceBet === undefined) {
+    return;
+  }
+
+  applyFormCarryOverValues({
+    date: sourceBet.date,
+    place: sourceBet.place,
+    race: sourceBet.race,
+    ticketType: sourceBet.ticketType,
+    amount: sourceBet.amount,
+    tags: sourceBet.tags,
+    memo: ""
+  }, normalizePurchaseMode(sourceBet.purchaseMode));
+  clearHorseNumberSelection();
+  setFormModeNew();
+  openMobileSection("section-horses");
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function updateBetStatus(id, status) {
@@ -998,6 +1128,7 @@ function validateAndBuildCombination() {
   clearBetNumbersError();
 
   if (labels.length === 0) {
+    openMobileSection("section-basic");
     ticketTypeInput.setCustomValidity("券種を選択してください。");
     ticketTypeInput.reportValidity();
     return "";
@@ -1055,6 +1186,7 @@ function validateAndBuildCombinations() {
   clearBetNumbersError();
 
   if (!ticketType) {
+    openMobileSection("section-basic");
     ticketTypeInput.setCustomValidity("券種を選択してください。");
     ticketTypeInput.reportValidity();
     return [];
@@ -1322,6 +1454,7 @@ function isValidHorseNumber(value) {
 }
 
 function showBetNumbersError(input, message) {
+  openMobileSection("section-horses");
   betNumbersError.textContent = message;
 
   if (input && typeof input.setCustomValidity === "function") {
@@ -1462,6 +1595,8 @@ function updateGeneratedPreview() {
 
   generatedCount.textContent = String(combinations.length);
   generatedTotalAmount.textContent = formatYen(totalAmountValue);
+  stickyGeneratedCount.textContent = String(combinations.length);
+  stickyGeneratedTotalAmount.textContent = formatYen(totalAmountValue);
   generatedWarning.textContent = "";
 
   if (!ticketType || combinations.length === 0) {
@@ -1477,6 +1612,41 @@ function updateGeneratedPreview() {
   } else if (combinations.length > 50) {
     generatedWarning.textContent = "生成点数が50点を超えています。金額と買い目を確認してください。";
   }
+}
+
+function renderQuickInputControls() {
+  amountQuickButtons.innerHTML = QUICK_AMOUNTS.map(function (amount) {
+    return '<button type="button" class="quick-button amount-quick-button" data-amount="' + amount + '">' + formatYen(amount) + "円</button>";
+  }).join("");
+
+  tagQuickButtons.innerHTML = QUICK_TAGS.map(function (tag) {
+    return '<button type="button" class="quick-button tag-quick-button" data-tag="' + escapeHtml(tag) + '">' + escapeHtml(tag) + "</button>";
+  }).join("");
+}
+
+function addTagToInput(tag) {
+  const nextTag = String(tag || "").trim();
+
+  if (nextTag === "") {
+    return;
+  }
+
+  const tags = parseTags(tagsInput.value);
+
+  if (!tags.includes(nextTag)) {
+    tags.push(nextTag);
+  }
+
+  tagsInput.value = tags.join(", ");
+}
+
+function stepRace(direction) {
+  const currentRace = normalizeRaceNumber(raceInput.value);
+  const currentNumber = currentRace === "" ? 1 : Number(currentRace.replace("R", ""));
+  const nextNumber = Math.min(12, Math.max(1, currentNumber + direction));
+
+  raceInput.value = nextNumber + "R";
+  raceInput.setCustomValidity("");
 }
 
 function previewBuildCombinations() {
@@ -1592,6 +1762,77 @@ function setFormModeEdit(bet) {
   editOnlyFields.style.display = "grid";
   editMessage.textContent = "編集中：" + (bet.date || "") + " " + (bet.place || "") + " " + (bet.race || "");
   updateGeneratedPreview();
+}
+
+function resetFormAfterNewSubmit() {
+  if (!mobileInputSettings.carryOverEnabled) {
+    resetForm();
+    return;
+  }
+
+  const carriedValues = {
+    date: dateInput.value,
+    place: placeInput.value,
+    race: raceInput.value,
+    ticketType: ticketTypeInput.value,
+    amount: amountInput.value,
+    tags: parseTags(tagsInput.value),
+    memo: mobileInputSettings.carryOverMemo ? memoInput.value : ""
+  };
+  const carriedPurchaseMode = getSelectedPurchaseMode();
+
+  if (mobileInputSettings.advanceRaceAfterSubmit) {
+    const currentRace = normalizeRaceNumber(carriedValues.race);
+    const currentNumber = currentRace === "" ? 1 : Number(currentRace.replace("R", ""));
+    carriedValues.race = Math.min(12, currentNumber + 1) + "R";
+  }
+
+  applyFormCarryOverValues(carriedValues, carriedPurchaseMode);
+  clearHorseNumberSelection();
+  setFormModeNew();
+  openMobileSection("section-horses");
+}
+
+function applyFormCarryOverValues(values, purchaseMode) {
+  const nextValues = values || {};
+
+  dateInput.value = nextValues.date || getTodayText();
+  ensureSelectHasOption(placeInput, nextValues.place);
+  ensureSelectHasOption(ticketTypeInput, nextValues.ticketType);
+  placeInput.value = nextValues.place || "";
+  raceInput.value = normalizeRaceNumber(nextValues.race);
+  ticketTypeInput.value = nextValues.ticketType || "";
+  setSelectedPurchaseMode(purchaseMode || "通常");
+  ensurePurchaseModeAllowed();
+  renderHorseNumberInputs();
+  amountInput.value = nextValues.amount === undefined || nextValues.amount === null ? "" : nextValues.amount;
+  tagsInput.value = Array.isArray(nextValues.tags) ? nextValues.tags.join(", ") : "";
+  memoInput.value = nextValues.memo || "";
+  statusInput.value = "未確定";
+  payoutInput.value = 0;
+  updateFormPayoutState();
+  updateGeneratedPreview();
+}
+
+function clearHorseNumberSelection() {
+  betNumbersInput.value = "";
+  horseNumberFields.querySelectorAll("input").forEach(function (input) {
+    if (input.classList.contains("horse-number-input")) {
+      input.value = "";
+    } else if (input.classList.contains("horse-choice-input")) {
+      input.checked = false;
+    }
+  });
+  clearBetNumbersError();
+  updateGeneratedPreview();
+}
+
+function openMobileSection(sectionId) {
+  const section = document.getElementById(sectionId);
+
+  if (section !== null) {
+    section.open = true;
+  }
 }
 
 function ensureSelectHasOption(select, value) {
@@ -3505,6 +3746,7 @@ function getBetProfit(bet) {
 
 function resetForm() {
   betForm.reset();
+  applyMobileInputSettingsToForm();
   setToday();
   renderHorseNumberInputs();
   setFormModeNew();
@@ -3514,20 +3756,27 @@ function resetForm() {
 function setSelectValidationMessages() {
   placeInput.addEventListener("invalid", function () {
     if (!placeInput.value) {
+      openMobileSection("section-basic");
       placeInput.setCustomValidity("競馬場を選択してください。");
     }
   });
 
   raceInput.addEventListener("invalid", function () {
     if (!raceInput.value) {
+      openMobileSection("section-basic");
       raceInput.setCustomValidity("レース番号を選択してください。");
     }
   });
 
   ticketTypeInput.addEventListener("invalid", function () {
     if (!ticketTypeInput.value) {
+      openMobileSection("section-basic");
       ticketTypeInput.setCustomValidity("券種を選択してください。");
     }
+  });
+
+  amountInput.addEventListener("invalid", function () {
+    openMobileSection("section-extra");
   });
 }
 
