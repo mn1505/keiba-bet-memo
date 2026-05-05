@@ -46,6 +46,7 @@ ORDERED_BET_TYPES = {"馬単", "三連単"}
 MAX_CANDIDATES_TO_SHOW = 80
 RACE_ID_PATTERN = re.compile(r"^\d{8}-[A-Z]+-(?:[1-9]|1[0-2])R$")
 DAY_HTML_FILENAME_PATTERN = re.compile(r"^(20\d{6})-([A-Z]+)-(?:all|payouts)\.html?$", re.IGNORECASE)
+PAYBACK_LIST_DATE_PATTERN = re.compile(r"payback_list\.html\?[^\"'<> ]*kaisai_date=(20\d{6})", re.IGNORECASE)
 
 
 def print_notice():
@@ -349,13 +350,19 @@ def infer_day_info(html_path, html_text):
             )
             return inferred
 
+    payback_date_match = PAYBACK_LIST_DATE_PATTERN.search(html_text)
+    if payback_date_match:
+        display_date, compact_date = normalize_date_input(payback_date_match.group(1))
+        inferred["date"] = display_date
+        inferred["compact_date"] = compact_date
+
     soup = get_soup(html_text)
     body_text = soup.get_text(" ")
     combined_text = f"{html_path.name} {html_text[:12000]} {body_text[:12000]}"
 
     display_date, compact_date = find_date_in_text(combined_text)
     track_label, track_code = find_track_in_text(combined_text)
-    if display_date:
+    if display_date and "date" not in inferred:
         inferred["date"] = display_date
         inferred["compact_date"] = compact_date
     if track_label:
@@ -403,6 +410,55 @@ def detect_race_number(text):
     return None
 
 
+def is_block_tag(tag):
+    return tag.name in {
+        "article",
+        "caption",
+        "div",
+        "dl",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "li",
+        "p",
+        "section",
+        "table",
+        "tbody",
+        "td",
+        "th",
+        "tr",
+        "ul",
+    }
+
+
+def find_nearby_race_number(tag):
+    """テーブルや行の近くにあるレース番号を探します。"""
+    for parent in [tag] + list(tag.parents):
+        if parent is not tag and parent.name in {"body", "html", "[document]"}:
+            continue
+        parent_text = normalize_text(parent.get_text(" ", strip=True))
+        if parent is not tag and len(parent_text) > 300:
+            continue
+        race_number = detect_race_number(parent_text)
+        if race_number is not None:
+            return race_number
+
+    current = tag
+    for _step in range(20):
+        current = current.find_previous(is_block_tag)
+        if current is None:
+            break
+        current_text = normalize_text(current.get_text(" ", strip=True))
+        race_number = detect_race_number(current_text)
+        if race_number is not None:
+            return race_number
+
+    return None
+
+
 def split_lines_by_race(text):
     lines = [normalize_text(line) for line in text.splitlines()]
     lines = [line for line in lines if line]
@@ -425,10 +481,19 @@ def split_lines_by_race(text):
 
 def extract_day_candidates_from_html(html_text, date_text, track_code):
     soup = get_soup(html_text)
-    text = soup.get_text("\n")
-    blocks, unknown_lines = split_lines_by_race(text)
     by_race = {race_number: [] for race_number in range(1, 13)}
     unknown_candidates = []
+
+    table_candidates_by_race, table_unknown_candidates = extract_day_candidates_from_tables(soup, date_text, track_code)
+    for race_number, candidates in table_candidates_by_race.items():
+        by_race[race_number].extend(candidates)
+    unknown_candidates.extend(table_unknown_candidates)
+
+    for table in soup.find_all("table"):
+        table.decompose()
+
+    text = soup.get_text("\n")
+    blocks, unknown_lines = split_lines_by_race(text)
 
     for race_number, block_lines in blocks.items():
         block_text = "\n".join(block_lines)
@@ -439,17 +504,18 @@ def extract_day_candidates_from_html(html_text, date_text, track_code):
         for candidate in candidates:
             candidate["raceId"] = race_id
             candidate["sourceMemo"] = f"{race_number}R {candidate['sourceMemo']}"
-        by_race[race_number] = candidates
+        by_race[race_number].extend(candidates)
 
     unknown_text = "\n".join(unknown_lines)
     if unknown_text:
-        unknown_candidates = extract_from_text_blocks(unknown_text)
-        for candidate in unknown_candidates:
+        text_unknown_candidates = extract_from_text_blocks(unknown_text)
+        for candidate in text_unknown_candidates:
             candidate["sourceMemo"] = f"race unknown {candidate['sourceMemo']}"
+        unknown_candidates.extend(text_unknown_candidates)
 
     for race_number in by_race:
         by_race[race_number] = dedupe_candidate_items(by_race[race_number])
-    unknown_candidates = dedupe_candidate_items(unknown_candidates)
+    unknown_candidates = dedupe_unknown_candidate_items(unknown_candidates)
     return by_race, unknown_candidates
 
 
@@ -549,8 +615,113 @@ def find_combination_values(text, required_count):
     return combinations
 
 
+def split_cell_lines(cell):
+    lines = []
+    for line in cell.get_text("\n").splitlines():
+        normalized = normalize_text(line)
+        if normalized:
+            lines.append(normalized)
+    return lines
+
+
+def text_looks_like_popularity(text):
+    normalized = normalize_text(text)
+    return "人気" in normalized or re.fullmatch(r"\d+\s*番人気", normalized) is not None
+
+
+def collect_combinations_from_texts(bet_type, texts):
+    required_count = HORSE_COUNT_BY_BET_TYPE[bet_type]
+    combinations = []
+    for text in texts:
+        if "円" in text or text_looks_like_popularity(text):
+            continue
+        for raw_combination, _position, _raw_text in find_combination_values(text, required_count):
+            combination = normalize_combination(bet_type, raw_combination)
+            if combination is not None:
+                combinations.append(combination)
+    return combinations
+
+
+def collect_payouts_from_texts(texts):
+    payouts = []
+    for text in texts:
+        if text_looks_like_popularity(text):
+            continue
+        for payout, _position, _raw_text in find_payout_values(text):
+            payouts.append(payout)
+    return payouts
+
+
+def build_candidates_from_table_row(row, source_memo):
+    cells = row.find_all(["th", "td"])
+    if not cells:
+        return []
+
+    cell_lines = [split_cell_lines(cell) for cell in cells]
+    cell_texts = [" ".join(lines) for lines in cell_lines]
+    row_text = " ".join(text for text in cell_texts if text)
+    bet_type = normalize_bet_type(row_text)
+    if bet_type is None:
+        return []
+
+    bet_cell_index = 0
+    for index, text in enumerate(cell_texts):
+        if normalize_bet_type(text) == bet_type:
+            bet_cell_index = index
+            break
+
+    value_lines = []
+    for lines in cell_lines[bet_cell_index + 1 :]:
+        value_lines.extend(lines)
+
+    combinations = collect_combinations_from_texts(bet_type, value_lines)
+    payouts = collect_payouts_from_texts(value_lines)
+    candidates = []
+
+    if combinations and payouts and len(combinations) == len(payouts):
+        for combination, payout in zip(combinations, payouts):
+            candidates.append(make_result_item(None, bet_type, combination, payout, source_memo))
+        return candidates
+
+    return build_candidates_from_text(row_text, source_memo)
+
+
+def extract_day_candidates_from_tables(soup, date_text, track_code):
+    by_race = {race_number: [] for race_number in range(1, 13)}
+    unknown_candidates = []
+
+    for table_index, table in enumerate(soup.find_all("table"), start=1):
+        table_race_number = find_nearby_race_number(table)
+        for row_index, row in enumerate(table.find_all("tr"), start=1):
+            row_text = normalize_text(row.get_text(" ", strip=True))
+            if not any(bet_type in row_text or bet_type.replace("三", "3") in row_text for bet_type in BET_TYPES):
+                continue
+
+            race_number = detect_race_number(row_text) or table_race_number or find_nearby_race_number(row)
+            source_memo = f"table {table_index} row {row_index}"
+            candidates = build_candidates_from_table_row(row, source_memo)
+            if not candidates:
+                continue
+
+            if race_number is None:
+                unknown_candidates.extend(candidates)
+                continue
+
+            race_id = create_race_id(date_text, track_code, race_number)
+            for candidate in candidates:
+                candidate["raceId"] = race_id
+                candidate["sourceMemo"] = f"{race_number}R {candidate['sourceMemo']}"
+            by_race[race_number].extend(candidates)
+
+    return by_race, unknown_candidates
+
+
 def build_candidates_from_text(text, source_memo):
     normalized = normalize_text(text)
+    normalized = re.sub(r"第\s*([1-9]|1[0-2])\s*レース", " ", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"(?<!\d)([1-9]|1[0-2])\s*レース", " ", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"(?<!\d)([1-9]|1[0-2])\s*R(?![A-Z0-9])", " ", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"\d+\s*番?人気", " ", normalized)
     candidates = []
 
     for bet_type in BET_TYPES:
@@ -561,6 +732,13 @@ def build_candidates_from_text(text, source_memo):
         combinations = find_combination_values(normalized, required_count)
         payouts = find_payout_values(normalized)
         if not combinations or not payouts:
+            continue
+
+        if len(combinations) == len(payouts):
+            for (raw_combination, _combination_pos, _combination_text), (payout, _payout_pos, _payout_text) in zip(combinations, payouts):
+                combination = normalize_combination(bet_type, raw_combination)
+                if combination is not None:
+                    candidates.append(make_result_item(None, bet_type, combination, payout, source_memo))
             continue
 
         for raw_combination, combination_pos, _combination_text in combinations:
@@ -613,6 +791,23 @@ def dedupe_candidate_items(candidates):
     seen = set()
     for candidate in candidates:
         key = (candidate["betType"], candidate["combination"], candidate["payout"])
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(candidate)
+    return unique
+
+
+def dedupe_unknown_candidate_items(candidates):
+    unique = []
+    seen = set()
+    for candidate in candidates:
+        key = (
+            candidate["betType"],
+            candidate["combination"],
+            candidate["payout"],
+            candidate.get("sourceMemo"),
+        )
         if key in seen:
             continue
         seen.add(key)
@@ -766,6 +961,32 @@ def print_result_preview(results):
         )
 
 
+def count_by_race_id(results):
+    counts = {}
+    for result in results:
+        race_id = result.get("raceId") or "raceId未確定"
+        counts[race_id] = counts.get(race_id, 0) + 1
+    return counts
+
+
+def race_id_sort_key(race_id):
+    match = re.search(r"-(?:[1-9]|1[0-2])R$", race_id)
+    if not match:
+        return (99, race_id)
+    race_number = int(race_id.rsplit("-", 1)[1].replace("R", ""))
+    return (race_number, race_id)
+
+
+def print_final_day_preview(results):
+    print(f"出力予定件数: {len(results)}件")
+    print("raceIdごとの件数:")
+    for race_id, count in sorted(count_by_race_id(results).items(), key=lambda item: race_id_sort_key(item[0])):
+        print(f"  {race_id}: {count}件")
+
+    print("\nサンプル:")
+    print_result_preview(results[:12])
+
+
 def count_by_bet_type(results):
     counts = {}
     for result in results:
@@ -805,6 +1026,188 @@ def show_day_candidates_preview(candidates_by_race, unknown_candidates):
     if unknown_candidates:
         print("\nレース番号を推定できない候補があります。手動確認してください。")
         print_result_preview(unknown_candidates[:MAX_CANDIDATES_TO_SHOW])
+
+
+def group_candidates_by_payout_sets(candidates):
+    """単勝の出現を次レース開始の目印として、候補をまとまりに分けます。"""
+    groups = []
+    current_group = []
+
+    for candidate in candidates:
+        if candidate.get("betType") == "単勝" and current_group:
+            groups.append(current_group)
+            current_group = []
+        current_group.append(candidate)
+
+    if current_group:
+        groups.append(current_group)
+
+    return groups
+
+
+def assign_candidate_groups_to_races(candidate_groups, date_text, track_code, start_race_number=1):
+    assigned_by_race = {race_number: [] for race_number in range(1, 13)}
+    overflow_candidates = []
+
+    for group_index, group in enumerate(candidate_groups):
+        race_number = start_race_number + group_index
+        if race_number > 12:
+            overflow_candidates.extend(group)
+            continue
+
+        race_id = create_race_id(date_text, track_code, race_number)
+        for candidate in group:
+            item = dict(candidate)
+            item["raceId"] = race_id
+            item["sourceMemo"] = f"{race_number}R fallback {item.get('sourceMemo', '')}".strip()
+            assigned_by_race[race_number].append(item)
+
+    return assigned_by_race, overflow_candidates
+
+
+def first_empty_race_number(candidates_by_race):
+    for race_number in range(1, 13):
+        if not candidates_by_race.get(race_number):
+            return race_number
+    return 13
+
+
+def show_fallback_assignment_preview(candidate_groups, date_text, track_code, start_race_number=1):
+    print("\nレース見出しから推定できなかったため、払戻セットの並び順からレース番号を推定しました")
+    for group_index, group in enumerate(candidate_groups):
+        race_number = start_race_number + group_index
+        if race_number > 12:
+            print(f"  割当不可: {len(group)}件")
+            continue
+        race_id = create_race_id(date_text, track_code, race_number)
+        print(f"  {race_number}R ({race_id}): {len(group)}件")
+
+
+def merge_candidates_by_race(base_by_race, extra_by_race):
+    merged = {race_number: list(base_by_race.get(race_number, [])) for race_number in range(1, 13)}
+    for race_number, candidates in extra_by_race.items():
+        merged[race_number].extend(candidates)
+        merged[race_number] = dedupe_candidate_items(merged[race_number])
+    return merged
+
+
+def prompt_manual_assign_unknown_candidates(candidate_groups, date_text, track_code):
+    assigned_by_race = {race_number: [] for race_number in range(1, 13)}
+    excluded_candidates = []
+    start_index = 1
+
+    print("\n手動割当モード")
+    print("候補のまとまりごとに、割り当てるレース番号を入力してください。除外する場合は 0 を入力します。")
+
+    for group in candidate_groups:
+        end_index = start_index + len(group) - 1
+        print(f"\n候補{start_index}〜{end_index}: {format_bet_type_counts(group)}")
+        print_result_preview(group[:5])
+        while True:
+            value = prompt_required(f"候補{start_index}〜{end_index}を何Rにしますか（1〜12、除外は0）")
+            if value.endswith(("R", "r")):
+                value = value[:-1]
+            if value == "0":
+                excluded_candidates.extend(group)
+                break
+            if value.isdigit() and 1 <= int(value) <= 12:
+                race_number = int(value)
+                race_id = create_race_id(date_text, track_code, race_number)
+                for candidate in group:
+                    item = dict(candidate)
+                    item["raceId"] = race_id
+                    item["sourceMemo"] = f"{race_number}R manual assign {item.get('sourceMemo', '')}".strip()
+                    assigned_by_race[race_number].append(item)
+                break
+            print("1〜12 のレース番号、または 0 を入力してください。")
+        start_index = end_index + 1
+
+    return assigned_by_race, excluded_candidates
+
+
+def handle_unresolved_after_auto_assignment(candidates_by_race, unresolved, date_text, track_code):
+    if not unresolved:
+        return candidates_by_race, []
+
+    print("\nraceIdを自動割当できなかった候補があります。")
+    print_result_preview(unresolved[:MAX_CANDIDATES_TO_SHOW])
+    _label, overflow_action = prompt_choice(
+        "未割当候補をどう扱いますか。",
+        [
+            ("手動で割り当てる", "manual"),
+            ("除外する", "exclude"),
+            ("中止", "cancel"),
+        ],
+        default_label="1",
+    )
+    if overflow_action == "cancel":
+        print("中止しました。raceId未確定の候補が残っていたため、JSONは出力していません。")
+        sys.exit(0)
+    if overflow_action == "exclude":
+        print("raceId未確定の候補を除外しました。")
+        return candidates_by_race, []
+
+    overflow_groups = group_candidates_by_payout_sets(unresolved)
+    manual_by_race, excluded = prompt_manual_assign_unknown_candidates(overflow_groups, date_text, track_code)
+    if excluded:
+        print(f"手動割当で除外した候補: {len(excluded)}件")
+    return merge_candidates_by_race(candidates_by_race, manual_by_race), []
+
+
+def prompt_resolve_unknown_day_candidates(candidates_by_race, unknown_candidates, date_text, track_code):
+    if not unknown_candidates:
+        return candidates_by_race, []
+
+    candidate_groups = group_candidates_by_payout_sets(unknown_candidates)
+    known_count = sum(len(items) for items in candidates_by_race.values())
+    start_race_number = 1 if known_count == 0 else first_empty_race_number(candidates_by_race)
+
+    if known_count == 0 and candidate_groups:
+        show_fallback_assignment_preview(candidate_groups, date_text, track_code, start_race_number)
+        if prompt_yes_no("この割当で続行しますか", default="y"):
+            assigned_by_race, unresolved = assign_candidate_groups_to_races(
+                candidate_groups, date_text, track_code, start_race_number
+            )
+            merged_by_race = merge_candidates_by_race(candidates_by_race, assigned_by_race)
+            return handle_unresolved_after_auto_assignment(merged_by_race, unresolved, date_text, track_code)
+
+    print("\nraceId未確定の候補があります")
+    _label, action = prompt_choice(
+        "未確定候補をどう扱いますか。",
+        [
+            ("自動割当する", "auto"),
+            ("手動で割り当てる", "manual"),
+            ("除外する", "exclude"),
+            ("中止", "cancel"),
+        ],
+        default_label="1",
+    )
+
+    if action == "cancel":
+        print("中止しました。raceId未確定の候補が残っていたため、JSONは出力していません。")
+        sys.exit(0)
+    if action == "exclude":
+        print("raceId未確定の候補を除外しました。")
+        return candidates_by_race, []
+    if action == "manual":
+        assigned_by_race, excluded = prompt_manual_assign_unknown_candidates(candidate_groups, date_text, track_code)
+        if excluded:
+            print(f"手動割当で除外した候補: {len(excluded)}件")
+        return merge_candidates_by_race(candidates_by_race, assigned_by_race), []
+
+    show_fallback_assignment_preview(candidate_groups, date_text, track_code, start_race_number)
+    if not prompt_yes_no("この割当で続行しますか", default="y"):
+        print("自動割当を中止しました。手動割当に進みます。")
+        assigned_by_race, excluded = prompt_manual_assign_unknown_candidates(candidate_groups, date_text, track_code)
+        if excluded:
+            print(f"手動割当で除外した候補: {len(excluded)}件")
+        return merge_candidates_by_race(candidates_by_race, assigned_by_race), []
+
+    assigned_by_race, unresolved = assign_candidate_groups_to_races(
+        candidate_groups, date_text, track_code, start_race_number
+    )
+    merged_by_race = merge_candidates_by_race(candidates_by_race, assigned_by_race)
+    return handle_unresolved_after_auto_assignment(merged_by_race, unresolved, date_text, track_code)
 
 
 def prompt_day_candidate_action():
@@ -1089,6 +1492,18 @@ def run_day_payout_list_mode():
 
     show_day_candidates_preview(candidates_by_race, unknown_candidates)
     candidate_count = sum(len(items) for items in candidates_by_race.values()) + len(unknown_candidates)
+    candidates_by_race, unresolved_candidates = prompt_resolve_unknown_day_candidates(
+        candidates_by_race, unknown_candidates, date_text, track_code
+    )
+    if unresolved_candidates:
+        print("\nraceId未確定の候補が残っています。")
+        print_result_preview(unresolved_candidates[:MAX_CANDIDATES_TO_SHOW])
+        print("JSONに出力できる形式へ補完できなかったため、未確定候補は出力対象外です。")
+
+    if unknown_candidates:
+        print("\nレース番号補完後のプレビュー")
+        show_day_candidates_preview(candidates_by_race, [])
+
     adopted_results = prompt_adopt_day_candidates(candidates_by_race)
     manual_results = prompt_manual_day_results(date_text, track_code, bool(adopted_results))
     added_results = dedupe_results_with_confirmation(adopted_results + manual_results)
@@ -1098,7 +1513,7 @@ def run_day_payout_list_mode():
         return
 
     print("\n最終確認: これから出力する結果データ")
-    print_result_preview(added_results)
+    print_final_day_preview(added_results)
     if not prompt_yes_no("この内容でJSONに出力しますか", default="y"):
         print("中止しました。")
         return

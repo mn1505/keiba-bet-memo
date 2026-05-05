@@ -1,0 +1,788 @@
+[
+  {
+    "raceId": "20260502-TOKYO-1R",
+    "betType": "単勝",
+    "combination": "14",
+    "payout": 230
+  },
+  {
+    "raceId": "20260502-TOKYO-1R",
+    "betType": "複勝",
+    "combination": "14",
+    "payout": 130
+  },
+  {
+    "raceId": "20260502-TOKYO-1R",
+    "betType": "複勝",
+    "combination": "1",
+    "payout": 120
+  },
+  {
+    "raceId": "20260502-TOKYO-1R",
+    "betType": "複勝",
+    "combination": "10",
+    "payout": 650
+  },
+  {
+    "raceId": "20260502-TOKYO-1R",
+    "betType": "馬連",
+    "combination": "1-14",
+    "payout": 490
+  },
+  {
+    "raceId": "20260502-TOKYO-1R",
+    "betType": "ワイド",
+    "combination": "1-14",
+    "payout": 240
+  },
+  {
+    "raceId": "20260502-TOKYO-1R",
+    "betType": "ワイド",
+    "combination": "10-14",
+    "payout": 1050
+  },
+  {
+    "raceId": "20260502-TOKYO-1R",
+    "betType": "ワイド",
+    "combination": "1-10",
+    "payout": 1820
+  },
+  {
+    "raceId": "20260502-TOKYO-1R",
+    "betType": "馬単",
+    "combination": "14→1",
+    "payout": 890
+  },
+  {
+    "raceId": "20260502-TOKYO-1R",
+    "betType": "三連複",
+    "combination": "1-10-14",
+    "payout": 3810
+  },
+  {
+    "raceId": "20260502-TOKYO-1R",
+    "betType": "三連単",
+    "combination": "14→1→10",
+    "payout": 10630
+  },
+  {
+    "raceId": "20260502-TOKYO-2R",
+    "betType": "単勝",
+    "combination": "3",
+    "payout": 230
+  },
+  {
+    "raceId": "20260502-TOKYO-2R",
+    "betType": "複勝",
+    "combination": "3",
+    "payout": 110
+  },
+  {
+    "raceId": "20260502-TOKYO-2R",
+    "betType": "複勝",
+    "combination": "5",
+    "payout": 110
+  },
+  {
+    "raceId": "20260502-TOKYO-2R",
+    "betType": "複勝",
+    "combination": "14",
+    "payout": 160
+  },
+  {
+    "raceId": "20260502-TOKYO-2R",
+    "betType": "馬連",
+    "combination": "3-5",
+    "payout": 140
+  },
+  {
+    "raceId": "20260502-TOKYO-2R",
+    "betType": "ワイド",
+    "combination": "3-5",
+    "payout": 110
+  },
+  {
+    "raceId": "20260502-TOKYO-2R",
+    "betType": "ワイド",
+    "combination": "3-14",
+    "payout": 280
+  },
+  {
+    "raceId": "20260502-TOKYO-2R",
+    "betType": "ワイド",
+    "combination": "5-14",
+    "payout": 210
+  },
+  {
+    "raceId": "20260502-TOKYO-2R",
+    "betType": "馬単",
+    "combination": "3→5",
+    "payout": 300
+  },
+  {
+    "raceId": "20260502-TOKYO-2R",
+    "betType": "三連複",
+    "combination": "3-5-14",
+    "payout": 350
+  },
+  {
+    "raceId": "20260502-TOKYO-2R",
+    "betType": "三連単",
+    "combination": "3→5→14",
+    "payout": 1280
+  },
+  {
+    "raceId": "20260502-TOKYO-3R",
+    "betType": "単勝",
+    "combination": "3",
+    "payout": 940
+  },
+  {
+    "raceId": "20260502-TOKYO-3R",
+    "betType": "複勝",
+    "combination": "3",
+    "payout": 320
+  },
+  {
+    "raceId": "20260502-TOKYO-3R",
+    "betType": "複勝",
+    "combination": "8",
+    "payout": 200
+  },
+  {
+    "raceId": "20260502-TOKYO-3R",
+    "betType": "複勝",
+    "combination": "9",
+    "payout": 500
+  },
+  {
+    "raceId": "20260502-TOKYO-3R",
+    "betType": "馬連",
+    "combination": "3-8",
+    "payout": 2350
+  },
+  {
+    "raceId": "20260502-TOKYO-3R",
+    "betType": "ワイド",
+    "combination": "3-8",
+    "payout": 800
+  },
+  {
+    "raceId": "20260502-TOKYO-3R",
+    "betType": "ワイド",
+    "combination": "3-9",
+    "payout": 2230
+  },
+  {
+    "raceId": "20260502-TOKYO-3R",
+    "betType": "ワイド",
+    "combination": "8-9",
+    "payout": 1350
+  },
+  {
+    "raceId": "20260502-TOKYO-3R",
+    "betType": "馬単",
+    "combination": "3→8",
+    "payout": 5850
+  },
+  {
+    "raceId": "20260502-TOKYO-3R",
+    "betType": "三連複",
+    "combination": "3-8-9",
+    "payout": 18120
+  },
+  {
+    "raceId": "20260502-TOKYO-3R",
+    "betType": "三連単",
+    "combination": "3→8→9",
+    "payout": 98430
+  },
+  {
+    "raceId": "20260502-TOKYO-4R",
+    "betType": "単勝",
+    "combination": "6",
+    "payout": 260
+  },
+  {
+    "raceId": "20260502-TOKYO-4R",
+    "betType": "複勝",
+    "combination": "6",
+    "payout": 110
+  },
+  {
+    "raceId": "20260502-TOKYO-4R",
+    "betType": "複勝",
+    "combination": "10",
+    "payout": 140
+  },
+  {
+    "raceId": "20260502-TOKYO-4R",
+    "betType": "複勝",
+    "combination": "5",
+    "payout": 170
+  },
+  {
+    "raceId": "20260502-TOKYO-4R",
+    "betType": "馬連",
+    "combination": "6-10",
+    "payout": 540
+  },
+  {
+    "raceId": "20260502-TOKYO-4R",
+    "betType": "ワイド",
+    "combination": "6-10",
+    "payout": 240
+  },
+  {
+    "raceId": "20260502-TOKYO-4R",
+    "betType": "ワイド",
+    "combination": "5-6",
+    "payout": 310
+  },
+  {
+    "raceId": "20260502-TOKYO-4R",
+    "betType": "ワイド",
+    "combination": "5-10",
+    "payout": 450
+  },
+  {
+    "raceId": "20260502-TOKYO-4R",
+    "betType": "馬単",
+    "combination": "6→10",
+    "payout": 900
+  },
+  {
+    "raceId": "20260502-TOKYO-4R",
+    "betType": "三連複",
+    "combination": "5-6-10",
+    "payout": 1150
+  },
+  {
+    "raceId": "20260502-TOKYO-4R",
+    "betType": "三連単",
+    "combination": "6→10→5",
+    "payout": 3750
+  },
+  {
+    "raceId": "20260502-TOKYO-5R",
+    "betType": "単勝",
+    "combination": "3",
+    "payout": 380
+  },
+  {
+    "raceId": "20260502-TOKYO-5R",
+    "betType": "複勝",
+    "combination": "3",
+    "payout": 180
+  },
+  {
+    "raceId": "20260502-TOKYO-5R",
+    "betType": "複勝",
+    "combination": "8",
+    "payout": 360
+  },
+  {
+    "raceId": "20260502-TOKYO-5R",
+    "betType": "複勝",
+    "combination": "9",
+    "payout": 250
+  },
+  {
+    "raceId": "20260502-TOKYO-5R",
+    "betType": "馬連",
+    "combination": "3-8",
+    "payout": 2560
+  },
+  {
+    "raceId": "20260502-TOKYO-5R",
+    "betType": "ワイド",
+    "combination": "3-8",
+    "payout": 1040
+  },
+  {
+    "raceId": "20260502-TOKYO-5R",
+    "betType": "ワイド",
+    "combination": "3-9",
+    "payout": 730
+  },
+  {
+    "raceId": "20260502-TOKYO-5R",
+    "betType": "ワイド",
+    "combination": "8-9",
+    "payout": 1120
+  },
+  {
+    "raceId": "20260502-TOKYO-5R",
+    "betType": "馬単",
+    "combination": "3→8",
+    "payout": 3940
+  },
+  {
+    "raceId": "20260502-TOKYO-5R",
+    "betType": "三連複",
+    "combination": "3-8-9",
+    "payout": 5440
+  },
+  {
+    "raceId": "20260502-TOKYO-5R",
+    "betType": "三連単",
+    "combination": "3→8→9",
+    "payout": 22350
+  },
+  {
+    "raceId": "20260502-TOKYO-6R",
+    "betType": "単勝",
+    "combination": "6",
+    "payout": 160
+  },
+  {
+    "raceId": "20260502-TOKYO-6R",
+    "betType": "複勝",
+    "combination": "6",
+    "payout": 110
+  },
+  {
+    "raceId": "20260502-TOKYO-6R",
+    "betType": "複勝",
+    "combination": "7",
+    "payout": 110
+  },
+  {
+    "raceId": "20260502-TOKYO-6R",
+    "betType": "馬連",
+    "combination": "6-7",
+    "payout": 120
+  },
+  {
+    "raceId": "20260502-TOKYO-6R",
+    "betType": "ワイド",
+    "combination": "6-7",
+    "payout": 110
+  },
+  {
+    "raceId": "20260502-TOKYO-6R",
+    "betType": "ワイド",
+    "combination": "3-6",
+    "payout": 470
+  },
+  {
+    "raceId": "20260502-TOKYO-6R",
+    "betType": "ワイド",
+    "combination": "3-7",
+    "payout": 390
+  },
+  {
+    "raceId": "20260502-TOKYO-6R",
+    "betType": "馬単",
+    "combination": "6→7",
+    "payout": 190
+  },
+  {
+    "raceId": "20260502-TOKYO-6R",
+    "betType": "三連複",
+    "combination": "3-6-7",
+    "payout": 630
+  },
+  {
+    "raceId": "20260502-TOKYO-6R",
+    "betType": "三連単",
+    "combination": "6→7→3",
+    "payout": 1770
+  },
+  {
+    "raceId": "20260502-TOKYO-7R",
+    "betType": "単勝",
+    "combination": "12",
+    "payout": 540
+  },
+  {
+    "raceId": "20260502-TOKYO-7R",
+    "betType": "複勝",
+    "combination": "12",
+    "payout": 200
+  },
+  {
+    "raceId": "20260502-TOKYO-7R",
+    "betType": "複勝",
+    "combination": "13",
+    "payout": 450
+  },
+  {
+    "raceId": "20260502-TOKYO-7R",
+    "betType": "複勝",
+    "combination": "9",
+    "payout": 720
+  },
+  {
+    "raceId": "20260502-TOKYO-7R",
+    "betType": "馬連",
+    "combination": "12-13",
+    "payout": 3970
+  },
+  {
+    "raceId": "20260502-TOKYO-7R",
+    "betType": "ワイド",
+    "combination": "12-13",
+    "payout": 1250
+  },
+  {
+    "raceId": "20260502-TOKYO-7R",
+    "betType": "ワイド",
+    "combination": "9-12",
+    "payout": 2690
+  },
+  {
+    "raceId": "20260502-TOKYO-7R",
+    "betType": "ワイド",
+    "combination": "9-13",
+    "payout": 8140
+  },
+  {
+    "raceId": "20260502-TOKYO-7R",
+    "betType": "馬単",
+    "combination": "12→13",
+    "payout": 7210
+  },
+  {
+    "raceId": "20260502-TOKYO-7R",
+    "betType": "三連複",
+    "combination": "9-12-13",
+    "payout": 41440
+  },
+  {
+    "raceId": "20260502-TOKYO-7R",
+    "betType": "三連単",
+    "combination": "12→13→9",
+    "payout": 213030
+  },
+  {
+    "raceId": "20260502-TOKYO-8R",
+    "betType": "単勝",
+    "combination": "5",
+    "payout": 190
+  },
+  {
+    "raceId": "20260502-TOKYO-8R",
+    "betType": "複勝",
+    "combination": "5",
+    "payout": 110
+  },
+  {
+    "raceId": "20260502-TOKYO-8R",
+    "betType": "複勝",
+    "combination": "6",
+    "payout": 170
+  },
+  {
+    "raceId": "20260502-TOKYO-8R",
+    "betType": "複勝",
+    "combination": "3",
+    "payout": 150
+  },
+  {
+    "raceId": "20260502-TOKYO-8R",
+    "betType": "馬連",
+    "combination": "5-6",
+    "payout": 940
+  },
+  {
+    "raceId": "20260502-TOKYO-8R",
+    "betType": "ワイド",
+    "combination": "5-6",
+    "payout": 270
+  },
+  {
+    "raceId": "20260502-TOKYO-8R",
+    "betType": "ワイド",
+    "combination": "3-5",
+    "payout": 230
+  },
+  {
+    "raceId": "20260502-TOKYO-8R",
+    "betType": "ワイド",
+    "combination": "3-6",
+    "payout": 660
+  },
+  {
+    "raceId": "20260502-TOKYO-8R",
+    "betType": "馬単",
+    "combination": "5→6",
+    "payout": 1210
+  },
+  {
+    "raceId": "20260502-TOKYO-8R",
+    "betType": "三連複",
+    "combination": "3-5-6",
+    "payout": 1390
+  },
+  {
+    "raceId": "20260502-TOKYO-8R",
+    "betType": "三連単",
+    "combination": "5→6→3",
+    "payout": 4330
+  },
+  {
+    "raceId": "20260502-TOKYO-9R",
+    "betType": "単勝",
+    "combination": "12",
+    "payout": 350
+  },
+  {
+    "raceId": "20260502-TOKYO-9R",
+    "betType": "複勝",
+    "combination": "12",
+    "payout": 150
+  },
+  {
+    "raceId": "20260502-TOKYO-9R",
+    "betType": "複勝",
+    "combination": "2",
+    "payout": 140
+  },
+  {
+    "raceId": "20260502-TOKYO-9R",
+    "betType": "複勝",
+    "combination": "14",
+    "payout": 110
+  },
+  {
+    "raceId": "20260502-TOKYO-9R",
+    "betType": "馬連",
+    "combination": "2-12",
+    "payout": 1520
+  },
+  {
+    "raceId": "20260502-TOKYO-9R",
+    "betType": "ワイド",
+    "combination": "2-12",
+    "payout": 570
+  },
+  {
+    "raceId": "20260502-TOKYO-9R",
+    "betType": "ワイド",
+    "combination": "12-14",
+    "payout": 210
+  },
+  {
+    "raceId": "20260502-TOKYO-9R",
+    "betType": "ワイド",
+    "combination": "2-14",
+    "payout": 230
+  },
+  {
+    "raceId": "20260502-TOKYO-9R",
+    "betType": "馬単",
+    "combination": "12→2",
+    "payout": 2620
+  },
+  {
+    "raceId": "20260502-TOKYO-9R",
+    "betType": "三連複",
+    "combination": "2-12-14",
+    "payout": 800
+  },
+  {
+    "raceId": "20260502-TOKYO-9R",
+    "betType": "三連単",
+    "combination": "12→2→14",
+    "payout": 5860
+  },
+  {
+    "raceId": "20260502-TOKYO-10R",
+    "betType": "単勝",
+    "combination": "11",
+    "payout": 420
+  },
+  {
+    "raceId": "20260502-TOKYO-10R",
+    "betType": "複勝",
+    "combination": "11",
+    "payout": 150
+  },
+  {
+    "raceId": "20260502-TOKYO-10R",
+    "betType": "複勝",
+    "combination": "6",
+    "payout": 160
+  },
+  {
+    "raceId": "20260502-TOKYO-10R",
+    "betType": "複勝",
+    "combination": "2",
+    "payout": 190
+  },
+  {
+    "raceId": "20260502-TOKYO-10R",
+    "betType": "馬連",
+    "combination": "6-11",
+    "payout": 870
+  },
+  {
+    "raceId": "20260502-TOKYO-10R",
+    "betType": "ワイド",
+    "combination": "6-11",
+    "payout": 340
+  },
+  {
+    "raceId": "20260502-TOKYO-10R",
+    "betType": "ワイド",
+    "combination": "2-11",
+    "payout": 500
+  },
+  {
+    "raceId": "20260502-TOKYO-10R",
+    "betType": "ワイド",
+    "combination": "2-6",
+    "payout": 560
+  },
+  {
+    "raceId": "20260502-TOKYO-10R",
+    "betType": "馬単",
+    "combination": "11→6",
+    "payout": 1580
+  },
+  {
+    "raceId": "20260502-TOKYO-10R",
+    "betType": "三連複",
+    "combination": "2-6-11",
+    "payout": 2020
+  },
+  {
+    "raceId": "20260502-TOKYO-10R",
+    "betType": "三連単",
+    "combination": "11→6→2",
+    "payout": 7780
+  },
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "単勝",
+    "combination": "16",
+    "payout": 540
+  },
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "複勝",
+    "combination": "16",
+    "payout": 270
+  },
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "複勝",
+    "combination": "6",
+    "payout": 1290
+  },
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "複勝",
+    "combination": "14",
+    "payout": 460
+  },
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "馬連",
+    "combination": "6-16",
+    "payout": 24590
+  },
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "ワイド",
+    "combination": "6-16",
+    "payout": 5120
+  },
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "ワイド",
+    "combination": "14-16",
+    "payout": 1260
+  },
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "ワイド",
+    "combination": "6-14",
+    "payout": 8090
+  },
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "馬単",
+    "combination": "16→6",
+    "payout": 31360
+  },
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "三連複",
+    "combination": "6-14-16",
+    "payout": 49890
+  },
+  {
+    "raceId": "20260502-TOKYO-11R",
+    "betType": "三連単",
+    "combination": "16→6→14",
+    "payout": 286950
+  },
+  {
+    "raceId": "20260502-TOKYO-12R",
+    "betType": "単勝",
+    "combination": "5",
+    "payout": 420
+  },
+  {
+    "raceId": "20260502-TOKYO-12R",
+    "betType": "複勝",
+    "combination": "5",
+    "payout": 140
+  },
+  {
+    "raceId": "20260502-TOKYO-12R",
+    "betType": "複勝",
+    "combination": "2",
+    "payout": 110
+  },
+  {
+    "raceId": "20260502-TOKYO-12R",
+    "betType": "複勝",
+    "combination": "7",
+    "payout": 300
+  },
+  {
+    "raceId": "20260502-TOKYO-12R",
+    "betType": "馬連",
+    "combination": "2-5",
+    "payout": 370
+  },
+  {
+    "raceId": "20260502-TOKYO-12R",
+    "betType": "ワイド",
+    "combination": "2-5",
+    "payout": 190
+  },
+  {
+    "raceId": "20260502-TOKYO-12R",
+    "betType": "ワイド",
+    "combination": "5-7",
+    "payout": 980
+  },
+  {
+    "raceId": "20260502-TOKYO-12R",
+    "betType": "ワイド",
+    "combination": "2-7",
+    "payout": 620
+  },
+  {
+    "raceId": "20260502-TOKYO-12R",
+    "betType": "馬単",
+    "combination": "5→2",
+    "payout": 810
+  },
+  {
+    "raceId": "20260502-TOKYO-12R",
+    "betType": "三連複",
+    "combination": "2-5-7",
+    "payout": 1810
+  },
+  {
+    "raceId": "20260502-TOKYO-12R",
+    "betType": "三連単",
+    "combination": "5→2→7",
+    "payout": 6680
+  }
+]
