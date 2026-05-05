@@ -1446,3 +1446,586 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+/* v12.8: レガシー業務システム風UI */
+body {
+  color: #1f2933;
+  background: #eeeeee;
+  line-height: 1.45;
+  font-size: 14px;
+}
+
+.app-header {
+  padding: 14px max(18px, env(safe-area-inset-right)) 12px max(18px, env(safe-area-inset-left));
+  color: #ffffff;
+  background: #1f2a44;
+  border-bottom: 3px solid #111827;
+}
+
+.app-header h1 {
+  max-width: 1280px;
+  font-size: 22px;
+}
+
+.app-header p {
+  max-width: 1280px;
+  color: #d8dee8;
+  font-size: 13px;
+}
+
+.app-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  width: min(1280px, calc(100% - 20px));
+  margin: 10px auto 18px;
+}
+
+.simulation-section,
+.form-section,
+.list-section,
+.filter-section,
+.ticket-summary-section,
+.analysis-section,
+.analysis-panel,
+.result-import-section,
+.csv-section,
+.backup-section,
+.horse-choice-group,
+.generated-preview,
+.summary-box,
+.import-preview-grid div,
+.import-history-item,
+.record-highlight,
+.empty-message {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.simulation-section,
+.form-section,
+.list-section {
+  padding: 12px;
+  border: 1px solid #9ca3af;
+  background: #ffffff;
+}
+
+h2 {
+  margin: 0 0 8px;
+  padding: 4px 8px;
+  border-left: 5px solid #1f2a44;
+  border-bottom: 1px solid #9ca3af;
+  background: #f3f4f6;
+  font-size: 16px;
+}
+
+h3 {
+  font-size: 14px;
+}
+
+.section-title-row {
+  margin-bottom: 8px;
+}
+
+.section-title-row p,
+.simulation-note,
+.analysis-header p,
+.result-import-header p {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.simulation-grid {
+  grid-template-columns: repeat(7, minmax(118px, 1fr));
+  gap: 0;
+  border-top: 1px solid #9ca3af;
+  border-left: 1px solid #9ca3af;
+}
+
+.simulation-grid div,
+.analysis-card,
+.summary-box {
+  padding: 6px 8px;
+  border: 0;
+  border-right: 1px solid #9ca3af;
+  border-bottom: 1px solid #9ca3af;
+  background: #f9fafb;
+}
+
+.simulation-grid strong,
+.analysis-card strong {
+  margin-top: 2px;
+  font-size: 15px;
+}
+
+.simulation-grid div > span,
+.analysis-card span,
+.import-preview-grid span {
+  font-size: 12px;
+}
+
+.fund-controls,
+.form-grid,
+.edit-only-fields,
+.filter-grid,
+.result-import-controls,
+.backup-grid,
+.restore-controls {
+  gap: 8px;
+}
+
+.fund-controls {
+  grid-template-columns: minmax(200px, 280px) minmax(320px, 1fr);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+form {
+  gap: 8px;
+}
+
+.form-grid {
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  align-items: end;
+}
+
+.purchase-mode-section,
+.horse-number-section,
+.generated-preview-section {
+  grid-column: 1 / -1;
+  padding: 8px;
+  border: 1px solid #b7c0cc;
+  background: #f9fafb;
+}
+
+label,
+legend {
+  gap: 3px;
+  color: #263244;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+input,
+select,
+textarea,
+button,
+.primary-button,
+.secondary-button,
+.export-button,
+.backup-button,
+.edit-button,
+.duplicate-button,
+.delete-button {
+  border-radius: 0;
+  font-size: 13px;
+  transition: none;
+}
+
+input,
+select,
+textarea {
+  min-height: 32px;
+  padding: 5px 7px;
+  border: 1px solid #8f9aaa;
+  background: #ffffff;
+}
+
+textarea {
+  min-height: 64px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid #9cc3e6;
+  border-color: #1f5f99;
+}
+
+.segment-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.segment-options label,
+.horse-choice-grid label {
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 7px;
+  border-radius: 0;
+  background: #e5e7eb;
+}
+
+.segment-options label:has(input:checked),
+.horse-choice-grid label:has(input:checked) {
+  color: #ffffff;
+  background: #24324a;
+  border-color: #24324a;
+}
+
+.horse-selection-groups,
+.horse-selection-groups-flow,
+.horse-selection-groups-formation {
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.horse-selection-groups-box {
+  grid-template-columns: 1fr;
+}
+
+.horse-choice-group {
+  padding: 6px;
+  border-color: #b7c0cc;
+  background: #ffffff;
+}
+
+.horse-choice-grid {
+  grid-template-columns: repeat(18, minmax(30px, 1fr));
+  gap: 3px;
+}
+
+.generated-total-row {
+  gap: 8px 18px;
+  padding: 6px 8px;
+  border-radius: 0;
+  background: #eef2f7;
+}
+
+.generated-preview {
+  max-height: 150px;
+}
+
+.generated-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.generated-preview-table th,
+.generated-preview-table td {
+  padding: 4px 6px;
+  border: 1px solid #c5cedb;
+  text-align: left;
+}
+
+.generated-preview-table th {
+  background: #e5e7eb;
+}
+
+.primary-button,
+.secondary-button,
+.export-button,
+.backup-button,
+.edit-button,
+.duplicate-button,
+.delete-button {
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid #7d8794;
+  font-weight: 700;
+}
+
+.primary-button,
+.edit-button {
+  color: #ffffff;
+  background: #244766;
+}
+
+.secondary-button,
+.duplicate-button {
+  color: #1f2933;
+  background: #e5e7eb;
+}
+
+.export-button,
+.backup-button {
+  width: auto;
+  color: #ffffff;
+  background: #374151;
+}
+
+.delete-button {
+  color: #ffffff;
+  background: #8a3a3a;
+}
+
+.list-header {
+  margin-bottom: 8px;
+}
+
+.list-actions {
+  min-width: 360px;
+}
+
+.summary-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  min-width: 0;
+  background: #f9fafb;
+}
+
+.summary-box p {
+  gap: 6px;
+}
+
+.filter-section,
+.analysis-section,
+.result-import-section,
+.csv-section,
+.backup-section,
+.ticket-summary-section {
+  margin: 10px 0 0;
+  padding: 10px;
+  border: 1px solid #9ca3af;
+  background: #ffffff;
+}
+
+.filter-grid {
+  grid-template-columns: repeat(7, minmax(120px, 1fr));
+}
+
+.search-field {
+  grid-column: span 2;
+}
+
+.filter-grid input,
+.filter-grid select {
+  min-height: 32px;
+}
+
+.bet-table-scroll,
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #8f9aaa;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.bet-table,
+.analysis-table {
+  width: 100%;
+  min-width: 1080px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.analysis-table {
+  min-width: 720px;
+}
+
+.ticket-summary-table {
+  min-width: 640px;
+}
+
+.bet-table th,
+.bet-table td,
+.analysis-table th,
+.analysis-table td {
+  padding: 5px 7px;
+  border-right: 1px solid #c5cedb;
+  border-bottom: 1px solid #c5cedb;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.bet-table th,
+.analysis-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: #172033;
+  background: #dfe5ee;
+  font-weight: 700;
+}
+
+.bet-table tbody tr:nth-child(even),
+.analysis-table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.number-cell,
+.analysis-table td,
+.analysis-table th.number {
+  text-align: right;
+}
+
+.analysis-table th:first-child,
+.analysis-table td:first-child {
+  text-align: left;
+}
+
+.sort-button {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mono-cell {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.bet-number-cell {
+  font-weight: 700;
+}
+
+.memo-cell {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tag-cell {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-select,
+.payout-input {
+  min-width: 92px;
+  min-height: 28px;
+  padding: 3px 5px;
+}
+
+.status-pending {
+  color: #374151;
+  background: #f3f4f6;
+}
+
+.status-hit {
+  color: #0f5132;
+  background: #e8f3ed;
+}
+
+.status-miss {
+  color: #7f1d1d;
+  background: #f7e8e8;
+}
+
+.table-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(46px, 1fr));
+  gap: 4px;
+}
+
+.table-actions button {
+  min-height: 28px;
+  padding: 3px 6px;
+}
+
+.ticket-summary-list,
+.analysis-basic-cards {
+  display: grid;
+  gap: 0;
+}
+
+.analysis-basic-cards {
+  grid-template-columns: repeat(7, minmax(120px, 1fr));
+  border-top: 1px solid #9ca3af;
+  border-left: 1px solid #9ca3af;
+}
+
+.analysis-panel {
+  padding: 8px;
+  border-color: #9ca3af;
+}
+
+.ranking-list li,
+.record-highlight {
+  border-radius: 0;
+  background: #f9fafb;
+}
+
+.tag-chip,
+.sample-badge {
+  min-height: 20px;
+  padding: 1px 5px;
+  border-radius: 0;
+}
+
+.plus {
+  color: #075985;
+}
+
+.minus,
+.form-error,
+.simulation-message.is-error,
+.csv-message.is-error,
+.result-import-message.is-error,
+.backup-message.is-error {
+  color: #9f1239;
+}
+
+.empty-message,
+.import-empty,
+.horse-number-placeholder {
+  padding: 8px;
+  border-radius: 0;
+  background: #f9fafb;
+}
+
+@media (max-width: 760px) {
+  body {
+    font-size: 13px;
+  }
+
+  .app-layout {
+    width: 100%;
+    margin: 0;
+  }
+
+  .simulation-section,
+  .form-section,
+  .list-section {
+    padding: 10px max(10px, env(safe-area-inset-right)) 10px max(10px, env(safe-area-inset-left));
+  }
+
+  .simulation-grid,
+  .analysis-basic-cards {
+    grid-template-columns: repeat(2, minmax(135px, 1fr));
+    overflow-x: auto;
+  }
+
+  .form-grid,
+  .filter-grid,
+  .fund-controls,
+  .result-import-controls,
+  .backup-grid,
+  .restore-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .search-field {
+    grid-column: auto;
+  }
+
+  .horse-choice-grid {
+    grid-template-columns: repeat(6, minmax(34px, 1fr));
+  }
+
+  .horse-selection-groups,
+  .horse-selection-groups-flow,
+  .horse-selection-groups-box,
+  .horse-selection-groups-formation {
+    grid-template-columns: 1fr;
+  }
+
+  .list-actions {
+    min-width: 0;
+  }
+
+  .bet-table-scroll,
+  .table-scroll {
+    border-bottom: 3px solid #8f9aaa;
+  }
+}

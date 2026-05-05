@@ -1,4 +1,4 @@
-const CACHE_NAME = "keiba-purchase-record-v10-result-import";
+const CACHE_NAME = "keiba-purchase-record-v12-8-legacy-ui";
 
 const CACHE_FILES = [
   "./",

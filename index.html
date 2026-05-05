@@ -232,7 +232,6 @@
           <p id="bet-count">0件</p>
         </div>
         <div class="list-actions">
-          <button type="button" id="export-csv" class="export-button">表示中のデータをCSV出力</button>
           <div class="summary-box" aria-label="集計">
             <p>購入：<span id="total-amount">0</span>円</p>
             <p>払戻：<span id="total-payout">0</span>円</p>
@@ -285,12 +284,55 @@
               <option value="不的中">不的中</option>
             </select>
           </label>
+
+          <label>
+            タグ
+            <select id="filter-tag">
+              <option value="">すべて</option>
+            </select>
+          </label>
+
+          <label>
+            買い方
+            <select id="filter-purchase-mode">
+              <option value="">すべて</option>
+              <option value="通常">通常</option>
+              <option value="ながし">ながし</option>
+              <option value="ボックス">ボックス</option>
+              <option value="フォーメーション">フォーメーション</option>
+            </select>
+          </label>
+
+          <label class="search-field">
+            キーワード
+            <input type="search" id="search-keyword" placeholder="raceId / 買い目 / メモ / タグ">
+          </label>
         </div>
       </section>
 
+      <div id="empty-message" class="empty-message">
+        まだ購入記録が登録されていません。
+      </div>
+
+      <div id="bet-list" class="bet-list"></div>
+
       <section class="ticket-summary-section" aria-labelledby="ticket-summary-title">
         <h2 id="ticket-summary-title">券種別成績</h2>
-        <div id="ticket-summary-list" class="ticket-summary-list"></div>
+        <div class="table-scroll">
+          <table class="analysis-table ticket-summary-table">
+            <thead>
+              <tr>
+                <th>券種</th>
+                <th>件数</th>
+                <th>購入金額</th>
+                <th>払戻金</th>
+                <th>収支</th>
+                <th>回収率</th>
+              </tr>
+            </thead>
+            <tbody id="ticket-summary-list"></tbody>
+          </table>
+        </div>
       </section>
 
       <section class="analysis-section" aria-labelledby="analysis-title">
@@ -411,12 +453,6 @@
         </div>
       </section>
 
-      <div id="empty-message" class="empty-message">
-        まだ購入記録が登録されていません。
-      </div>
-
-      <div id="bet-list" class="bet-list"></div>
-
       <section class="result-import-section" aria-labelledby="result-import-title">
         <div class="result-import-header">
           <div>
@@ -447,6 +483,11 @@
           <h3 id="result-import-history-title">直近の取り込み履歴</h3>
           <div id="result-import-history-list" class="result-import-history-list"></div>
         </section>
+      </section>
+
+      <section class="csv-section" aria-labelledby="csv-title">
+        <h2 id="csv-title">CSV出力</h2>
+        <button type="button" id="export-csv" class="export-button">表示中のデータをCSV出力</button>
       </section>
 
       <section class="backup-section" aria-labelledby="backup-title">

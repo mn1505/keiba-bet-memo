@@ -2,7 +2,7 @@ const STORAGE_KEY = "keibaBetMemoList";
 const SIMULATION_STORAGE_KEY = "keibaBetMemoSimulationSettings";
 const IMPORT_HISTORY_STORAGE_KEY = "keibaBetMemoResultImportHistory";
 const APP_NAME = "keiba-bet-memo";
-const APP_VERSION = "v12.5-A";
+const APP_VERSION = "v12.8";
 const DEFAULT_INITIAL_FUND = 100000;
 const RACE_OPTIONS = ["1R", "2R", "3R", "4R", "5R", "6R", "7R", "8R", "9R", "10R", "11R", "12R"];
 const TICKET_TYPES = ["単勝", "複勝", "ワイド", "馬連", "馬単", "三連複", "三連単"];
@@ -90,6 +90,9 @@ const filterDateInput = document.getElementById("filter-date");
 const filterPlaceInput = document.getElementById("filter-place");
 const filterTicketTypeInput = document.getElementById("filter-ticket-type");
 const filterStatusInput = document.getElementById("filter-status");
+const filterTagInput = document.getElementById("filter-tag");
+const filterPurchaseModeInput = document.getElementById("filter-purchase-mode");
+const searchKeywordInput = document.getElementById("search-keyword");
 const resetFiltersButton = document.getElementById("reset-filters");
 const exportCsvButton = document.getElementById("export-csv");
 const csvMessage = document.getElementById("csv-message");
@@ -111,6 +114,10 @@ let simulationSettings = loadSimulationSettings();
 let resultImportHistory = loadResultImportHistory();
 let editingBetId = null;
 let currentResultImportPreview = null;
+let betSortState = {
+  key: "date",
+  direction: "desc"
+};
 
 setToday();
 setSelectValidationMessages();
@@ -235,12 +242,18 @@ filterDateInput.addEventListener("input", renderBets);
 filterPlaceInput.addEventListener("change", renderBets);
 filterTicketTypeInput.addEventListener("change", renderBets);
 filterStatusInput.addEventListener("change", renderBets);
+filterTagInput.addEventListener("change", renderBets);
+filterPurchaseModeInput.addEventListener("change", renderBets);
+searchKeywordInput.addEventListener("input", renderBets);
 
 resetFiltersButton.addEventListener("click", function () {
   filterDateInput.value = "";
   filterPlaceInput.value = "";
   filterTicketTypeInput.value = "";
   filterStatusInput.value = "";
+  filterTagInput.value = "";
+  filterPurchaseModeInput.value = "";
+  searchKeywordInput.value = "";
   renderBets();
 });
 
@@ -288,6 +301,11 @@ horseNumberFields.addEventListener("change", function () {
 
 // 一覧のボタンはあとから作るため、一覧全体でクリックを受け取ります。
 betList.addEventListener("click", function (event) {
+  if (event.target.classList.contains("sort-button")) {
+    updateBetSort(event.target.dataset.sortKey);
+    return;
+  }
+
   if (event.target.classList.contains("edit-button")) {
     startEditBet(event.target.dataset.id);
     return;
@@ -409,7 +427,7 @@ function normalizeSimulationSettings(settings) {
 }
 
 function renderBets() {
-  updatePlaceFilterOptions();
+  updateDynamicFilterOptions();
   clearCsvMessage();
   renderResultImportHistory();
 
@@ -427,107 +445,120 @@ function renderBets() {
     emptyMessage.style.display = "none";
   }
 
-  filteredBets.forEach(function (bet) {
-    const card = createBetCard(bet);
-    betList.appendChild(card);
-  });
+  if (filteredBets.length > 0) {
+    betList.appendChild(createBetTable(filteredBets));
+  }
 
   updateSummary(filteredBets);
   updateSimulationSummary();
 }
 
-function createBetCard(bet) {
-  const card = document.createElement("article");
-  card.className = "bet-card";
-  const tagsHtml = createTagsHtml(bet.tags);
-  const createdAtText = formatDateTime(bet.createdAt);
-  const updatedAtText = formatDateTime(bet.updatedAt);
-  const raceIdText = bet.raceId || createRaceId(bet.date, bet.place, bet.race);
-
-  card.innerHTML = `
-    <div class="bet-card-header">
-      <div>
-        <h3 class="bet-title">${escapeHtml(bet.place)} ${escapeHtml(bet.race)}</h3>
-        <p class="bet-date">${escapeHtml(bet.date)}</p>
-      </div>
-      <div class="bet-card-actions">
-        <button type="button" class="edit-button" data-id="${bet.id}">編集</button>
-        <button type="button" class="duplicate-button" data-id="${bet.id}">複製</button>
-        <button type="button" class="delete-button" data-id="${bet.id}">削除</button>
-      </div>
-    </div>
-
-    <dl class="bet-details">
-      <div>
-        <dt>券種</dt>
-        <dd>${escapeHtml(bet.ticketType)}</dd>
-      </div>
-      <div>
-        <dt>買い方</dt>
-        <dd>${escapeHtml(normalizePurchaseMode(bet.purchaseMode))}</dd>
-      </div>
-      ${bet.generatedGroupId ? `
-      <div>
-        <dt>生成グループ</dt>
-        <dd>${escapeHtml(bet.generatedGroupId)}</dd>
-      </div>
-      ` : ""}
-      <div>
-        <dt>raceId</dt>
-        <dd>${escapeHtml(raceIdText || "生成不可")}</dd>
-      </div>
-      <div>
-        <dt>買い目</dt>
-        <dd>${escapeHtml(bet.betNumbers)}</dd>
-      </div>
-      <div>
-        <dt>金額</dt>
-        <dd>${formatYen(bet.amount)}円</dd>
-      </div>
-      <div>
-        <dt>結果</dt>
-        <dd>
-          <select class="status-select" data-id="${bet.id}" aria-label="結果ステータス">
-            <option value="未確定"${bet.status === "未確定" ? " selected" : ""}>未確定</option>
-            <option value="的中"${bet.status === "的中" ? " selected" : ""}>的中</option>
-            <option value="不的中"${bet.status === "不的中" ? " selected" : ""}>不的中</option>
-          </select>
-        </dd>
-      </div>
-      <div>
-        <dt>払戻金</dt>
-        <dd>
-          <input
-            type="number"
-            class="payout-input"
-            data-id="${bet.id}"
-            min="0"
-            step="10"
-            value="${bet.payout}"
-            ${bet.status === "的中" ? "" : "disabled"}
-            aria-label="払戻金"
-          >
-        </dd>
-      </div>
-      <div class="bet-memo">
-        <dt>メモ</dt>
-        <dd>${escapeHtml(bet.memo || "なし")}</dd>
-      </div>
-      <div class="bet-tags-row">
-        <dt>タグ</dt>
-        <dd>${tagsHtml}</dd>
-      </div>
-      <div class="bet-time-row">
-        <dt>日時</dt>
-        <dd>
-          <span>登録：${escapeHtml(createdAtText || "不明")}</span>
-          <span>更新：${escapeHtml(updatedAtText || "不明")}</span>
-        </dd>
-      </div>
-    </dl>
+function createBetTable(targetBets) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "bet-table-scroll";
+  wrapper.innerHTML = `
+    <table class="bet-table">
+      <thead>
+        <tr>
+          ${createSortableHeader("date", "日付")}
+          ${createSortableHeader("place", "競馬場")}
+          ${createSortableHeader("race", "R")}
+          <th>raceId</th>
+          <th>券種</th>
+          <th>買い方</th>
+          <th>買い目</th>
+          ${createSortableHeader("amount", "金額", "number")}
+          ${createSortableHeader("status", "結果")}
+          ${createSortableHeader("payout", "払戻", "number")}
+          ${createSortableHeader("profit", "収支", "number")}
+          <th>タグ</th>
+          <th>メモ</th>
+          <th>更新</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${targetBets.map(createBetRowHtml).join("")}
+      </tbody>
+    </table>
   `;
 
-  return card;
+  return wrapper;
+}
+
+function createSortableHeader(key, label, className) {
+  const active = betSortState.key === key;
+  const mark = active ? (betSortState.direction === "asc" ? " ▲" : " ▼") : "";
+  const thClass = className ? ' class="' + className + '"' : "";
+
+  return '<th' + thClass + '><button type="button" class="sort-button" data-sort-key="' + key + '">' + escapeHtml(label + mark) + "</button></th>";
+}
+
+function createBetRowHtml(bet) {
+  const amount = Number(bet.amount) || 0;
+  const payout = Number(bet.payout) || 0;
+  const profit = payout - amount;
+  const profitClass = profit >= 0 ? "plus" : "minus";
+  const raceIdText = bet.raceId || createRaceId(bet.date, bet.place, bet.race);
+  const tagsText = Array.isArray(bet.tags) && bet.tags.length > 0 ? bet.tags.join(", ") : "";
+
+  return `
+    <tr>
+      <td>${escapeHtml(bet.date || "")}</td>
+      <td>${escapeHtml(bet.place || "")}</td>
+      <td>${escapeHtml(bet.race || "")}</td>
+      <td class="mono-cell">${escapeHtml(raceIdText || "")}</td>
+      <td>${escapeHtml(bet.ticketType || "")}</td>
+      <td>${escapeHtml(normalizePurchaseMode(bet.purchaseMode))}</td>
+      <td class="bet-number-cell">${escapeHtml(bet.betNumbers || "")}</td>
+      <td class="number-cell">${formatYen(amount)}円</td>
+      <td>
+        <select class="status-select status-${getStatusClassName(bet.status)}" data-id="${bet.id}" aria-label="結果ステータス">
+          <option value="未確定"${bet.status === "未確定" ? " selected" : ""}>未確定</option>
+          <option value="的中"${bet.status === "的中" ? " selected" : ""}>的中</option>
+          <option value="不的中"${bet.status === "不的中" ? " selected" : ""}>不的中</option>
+        </select>
+      </td>
+      <td class="number-cell">
+        <input
+          type="number"
+          class="payout-input"
+          data-id="${bet.id}"
+          min="0"
+          step="10"
+          value="${payout}"
+          ${bet.status === "的中" ? "" : "disabled"}
+          aria-label="払戻金"
+        >
+      </td>
+      <td class="number-cell ${profitClass}">${formatSignedYen(profit)}円</td>
+      <td class="tag-cell">${escapeHtml(tagsText || "なし")}</td>
+      <td class="memo-cell">${escapeHtml(bet.memo || "")}</td>
+      <td>${escapeHtml(formatDateTime(bet.updatedAt || bet.createdAt) || "")}</td>
+      <td>
+        <div class="table-actions">
+          <button type="button" class="edit-button" data-id="${bet.id}">編集</button>
+          <button type="button" class="duplicate-button" data-id="${bet.id}">複製</button>
+          <button type="button" class="delete-button" data-id="${bet.id}">削除</button>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+function updateBetSort(key) {
+  if (!key) {
+    return;
+  }
+
+  if (betSortState.key === key) {
+    betSortState.direction = betSortState.direction === "asc" ? "desc" : "asc";
+  } else {
+    betSortState.key = key;
+    betSortState.direction = key === "date" ? "desc" : "asc";
+  }
+
+  renderBets();
 }
 
 function normalizeBet(bet) {
@@ -1362,9 +1393,9 @@ function updateGeneratedPreview() {
   if (!ticketType || combinations.length === 0) {
     generatedPreview.innerHTML = '<p class="horse-number-placeholder">券種と馬番を選ぶと、生成される買い目が表示されます。</p>';
   } else {
-    generatedPreview.innerHTML = "<ul>" + combinations.map(function (combination) {
-      return "<li>" + escapeHtml(combination) + "</li>";
-    }).join("") + "</ul>";
+    generatedPreview.innerHTML = '<table class="generated-preview-table"><thead><tr><th>No</th><th>買い目</th></tr></thead><tbody>' + combinations.map(function (combination, index) {
+      return "<tr><td>" + (index + 1) + "</td><td>" + escapeHtml(combination) + "</td></tr>";
+    }).join("") + "</tbody></table>";
   }
 
   if (combinations.length > 100) {
@@ -2400,22 +2431,33 @@ function getFilteredBets() {
   const selectedPlace = filterPlaceInput.value;
   const selectedTicketType = filterTicketTypeInput.value;
   const selectedStatus = filterStatusInput.value;
+  const selectedTag = filterTagInput.value;
+  const selectedPurchaseMode = filterPurchaseModeInput.value;
+  const keyword = normalizeSearchText(searchKeywordInput.value);
 
-  return bets.filter(function (bet) {
+  const filteredBets = bets.filter(function (bet) {
     const dateMatches = selectedDate === "" || bet.date === selectedDate;
     const placeMatches = selectedPlace === "" || bet.place === selectedPlace;
     const ticketTypeMatches = selectedTicketType === "" || bet.ticketType === selectedTicketType;
     const statusMatches = selectedStatus === "" || bet.status === selectedStatus;
+    const tagMatches = selectedTag === "" || bet.tags.includes(selectedTag);
+    const purchaseModeMatches = selectedPurchaseMode === "" || normalizePurchaseMode(bet.purchaseMode) === selectedPurchaseMode;
+    const keywordMatches = keyword === "" || createSearchTextForBet(bet).includes(keyword);
 
-    return dateMatches && placeMatches && ticketTypeMatches && statusMatches;
+    return dateMatches && placeMatches && ticketTypeMatches && statusMatches && tagMatches && purchaseModeMatches && keywordMatches;
   });
+
+  return sortBets(filteredBets);
 }
 
-function updatePlaceFilterOptions() {
+function updateDynamicFilterOptions() {
   const selectedPlace = filterPlaceInput.value;
+  const selectedTag = filterTagInput.value;
   const places = getPlaceOptions();
+  const tags = getTagOptions();
 
   filterPlaceInput.innerHTML = '<option value="">すべて</option>';
+  filterTagInput.innerHTML = '<option value="">すべて</option>';
 
   places.forEach(function (place) {
     const option = document.createElement("option");
@@ -2424,11 +2466,24 @@ function updatePlaceFilterOptions() {
     filterPlaceInput.appendChild(option);
   });
 
+  tags.forEach(function (tag) {
+    const option = document.createElement("option");
+    option.value = tag;
+    option.textContent = tag;
+    filterTagInput.appendChild(option);
+  });
+
   // 削除などで選択中の競馬場がなくなった場合は「すべて」に戻します。
   if (selectedPlace !== "" && places.includes(selectedPlace)) {
     filterPlaceInput.value = selectedPlace;
   } else {
     filterPlaceInput.value = "";
+  }
+
+  if (selectedTag !== "" && tags.includes(selectedTag)) {
+    filterTagInput.value = selectedTag;
+  } else {
+    filterTagInput.value = "";
   }
 }
 
@@ -2444,6 +2499,77 @@ function getPlaceOptions() {
   return Array.from(new Set(places)).sort(function (a, b) {
     return a.localeCompare(b, "ja");
   });
+}
+
+function getTagOptions() {
+  const tags = [];
+
+  bets.forEach(function (bet) {
+    bet.tags.forEach(function (tag) {
+      if (tag !== "") {
+        tags.push(tag);
+      }
+    });
+  });
+
+  return Array.from(new Set(tags)).sort(function (a, b) {
+    return a.localeCompare(b, "ja");
+  });
+}
+
+function createSearchTextForBet(bet) {
+  return normalizeSearchText([
+    bet.raceId,
+    bet.betNumbers,
+    bet.memo,
+    bet.tags.join(" ")
+  ].join(" "));
+}
+
+function normalizeSearchText(text) {
+  return String(text || "").trim().toLowerCase();
+}
+
+function sortBets(targetBets) {
+  const sortedBets = targetBets.slice();
+  const direction = betSortState.direction === "asc" ? 1 : -1;
+
+  sortedBets.sort(function (a, b) {
+    const firstValue = getBetSortValue(a, betSortState.key);
+    const secondValue = getBetSortValue(b, betSortState.key);
+
+    if (typeof firstValue === "number" && typeof secondValue === "number") {
+      return (firstValue - secondValue) * direction;
+    }
+
+    return String(firstValue).localeCompare(String(secondValue), "ja", { numeric: true }) * direction;
+  });
+
+  return sortedBets;
+}
+
+function getBetSortValue(bet, key) {
+  if (key === "amount") {
+    return Number(bet.amount) || 0;
+  }
+
+  if (key === "payout") {
+    return Number(bet.payout) || 0;
+  }
+
+  if (key === "profit") {
+    return getBetProfit(bet);
+  }
+
+  if (key === "race") {
+    return Number(String(bet.race || "").replace(/\D/g, "")) || 0;
+  }
+
+  if (key === "status") {
+    return STATUS_TYPES.indexOf(normalizeStatus(bet.status));
+  }
+
+  return bet[key] || "";
 }
 
 function updateSummary(targetBets) {
@@ -2513,38 +2639,20 @@ function createTicketTypeSummaries(targetBets) {
 }
 
 function createTicketSummaryCard(summary) {
-  const card = document.createElement("article");
-  card.className = "ticket-summary-card";
+  const row = document.createElement("tr");
 
   const balanceClass = summary.balance >= 0 ? "plus" : "minus";
 
-  card.innerHTML = `
-    <h3>${escapeHtml(summary.ticketType)}</h3>
-    <dl>
-      <div>
-        <dt>件数</dt>
-        <dd>${summary.count}件</dd>
-      </div>
-      <div>
-        <dt>購入</dt>
-        <dd>${formatYen(summary.amountSum)}円</dd>
-      </div>
-      <div>
-        <dt>払戻</dt>
-        <dd>${formatYen(summary.payoutSum)}円</dd>
-      </div>
-      <div>
-        <dt>収支</dt>
-        <dd class="${balanceClass}">${formatSignedYen(summary.balance)}円</dd>
-      </div>
-      <div>
-        <dt>回収率</dt>
-        <dd>${summary.recoveryRate.toFixed(1)}%</dd>
-      </div>
-    </dl>
+  row.innerHTML = `
+    <th scope="row">${escapeHtml(summary.ticketType)}</th>
+    <td>${summary.count}件</td>
+    <td>${formatYen(summary.amountSum)}円</td>
+    <td>${formatYen(summary.payoutSum)}円</td>
+    <td class="${balanceClass}">${formatSignedYen(summary.balance)}円</td>
+    <td>${summary.recoveryRate.toFixed(1)}%</td>
   `;
 
-  return card;
+  return row;
 }
 
 function updateAnalysisDashboard(targetBets) {
@@ -2911,6 +3019,18 @@ function createTagsHtml(tags) {
   return tags.map(function (tag) {
     return '<span class="tag-chip">' + escapeHtml(tag) + "</span>";
   }).join("");
+}
+
+function getStatusClassName(status) {
+  if (status === "的中") {
+    return "hit";
+  }
+
+  if (status === "不的中") {
+    return "miss";
+  }
+
+  return "pending";
 }
 
 function formatDateTime(value) {
