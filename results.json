@@ -1,8 +1,98 @@
 [
   {
-    "raceId": "20260502-TOKYO-11R",
+    "raceId": "20260502-NIIGATA-11R",
     "betType": "ワイド",
-    "combination": "7-13",
-    "payout": 500
+    "combination": "3-7",
+    "payout": 446
+  },
+  {
+    "raceId": "20260502-NIIGATA-11R",
+    "betType": "単勝",
+    "combination": "16",
+    "payout": 540
+  },
+  {
+    "raceId": "20260502-NIIGATA-11R",
+    "betType": "単勝",
+    "combination": "3",
+    "payout": 540
+  },
+  {
+    "raceId": "20260502-NIIGATA-11R",
+    "betType": "複勝",
+    "combination": "16",
+    "payout": 270
+  },
+  {
+    "raceId": "20260502-NIIGATA-11R",
+    "betType": "複勝",
+    "combination": "6",
+    "payout": 270
+  },
+  {
+    "raceId": "20260502-NIIGATA-11R",
+    "betType": "複勝",
+    "combination": "14",
+    "payout": 270
+  },
+  {
+    "raceId": "20260502-NIIGATA-11R",
+    "betType": "複勝",
+    "combination": "3",
+    "payout": 270
+  },
+  {
+    "raceId": "20260502-NIIGATA-11R",
+    "betType": "複勝",
+    "combination": "13",
+    "payout": 270
+  },
+  {
+    "raceId": "20260502-NIIGATA-11R",
+    "betType": "複勝",
+    "combination": "7",
+    "payout": 270
+  },
+  {
+    "raceId": "20260502-NIIGATA-11R",
+    "betType": "馬連",
+    "combination": "6-16",
+    "payout": 24590
+  },
+  {
+    "raceId": "20260502-NIIGATA-11R",
+    "betType": "ワイド",
+    "combination": "6-16",
+    "payout": 5120
+  },
+  {
+    "raceId": "20260502-NIIGATA-11R",
+    "betType": "ワイド",
+    "combination": "14-16",
+    "payout": 5120
+  },
+  {
+    "raceId": "20260502-NIIGATA-11R",
+    "betType": "ワイド",
+    "combination": "6-14",
+    "payout": 5120
+  },
+  {
+    "raceId": "20260502-NIIGATA-11R",
+    "betType": "馬単",
+    "combination": "16→6",
+    "payout": 31360
+  },
+  {
+    "raceId": "20260502-NIIGATA-11R",
+    "betType": "三連複",
+    "combination": "6-14-16",
+    "payout": 49890
+  },
+  {
+    "raceId": "20260502-NIIGATA-11R",
+    "betType": "三連単",
+    "combination": "16→6→14",
+    "payout": 286950
   }
 ]
