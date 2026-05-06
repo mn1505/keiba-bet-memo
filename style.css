@@ -12,22 +12,47 @@ body {
 }
 
 .app-header {
-  padding: 28px max(20px, env(safe-area-inset-right)) 28px max(20px, env(safe-area-inset-left));
+  padding: 18px max(20px, env(safe-area-inset-right)) 18px max(20px, env(safe-area-inset-left));
   color: #ffffff;
   background: #172033;
   border-bottom: 1px solid #0f1725;
 }
 
-.app-header h1 {
+.app-header-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
   max-width: 1040px;
   margin: 0 auto 4px;
-  font-size: 28px;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: 0;
 }
 
 .app-header p {
   max-width: 1040px;
   margin: 0 auto;
   color: #d8dee8;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.app-subtitle {
+  margin-top: 2px;
+  color: #b9c2d0;
+}
+
+.version-badge {
+  padding: 2px 7px;
+  border: 1px solid #6e7d91;
+  color: #d8dee8;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .app-layout {
@@ -629,7 +654,6 @@ textarea {
   margin-top: 18px;
   padding: 14px;
   border: 1px solid #d6dde8;
-  border-radius: 4px;
   background: #f8fafc;
 }
 
@@ -637,7 +661,6 @@ textarea {
   margin-top: 18px;
   padding: 14px;
   border: 1px solid #c5cedb;
-  border-radius: 4px;
   background: #f8fafc;
 }
 
@@ -653,6 +676,16 @@ textarea {
   margin: 0;
   color: #4b5565;
   font-size: 14px;
+  font-weight: 700;
+}
+
+.system-note {
+  margin: 6px 0 0;
+  padding: 7px 9px;
+  border: 1px solid #d6dde8;
+  color: #4b5565;
+  background: #ffffff;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -847,6 +880,41 @@ textarea {
 
 .backup-section h2 {
   margin-bottom: 12px;
+}
+
+.mcy-export-section {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(240px, 1fr);
+  gap: 14px;
+  align-items: end;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #d6dde8;
+  background: #f8fafc;
+}
+
+.mcy-export-section h2 {
+  margin-bottom: 0;
+}
+
+.mcy-export-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.app-footer {
+  width: min(1040px, calc(100% - 32px));
+  margin: 0 auto 28px;
+  padding: 10px 0 0;
+  border-top: 1px solid #c5cedb;
+  color: #4b5565;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.app-footer p {
+  margin: 0 0 4px;
 }
 
 .backup-grid {
@@ -1467,6 +1535,16 @@ textarea {
     padding: 12px;
   }
 
+  .mcy-export-section {
+    grid-template-columns: 1fr;
+    margin-top: 18px;
+    padding: 12px;
+  }
+
+  .mcy-export-buttons {
+    grid-template-columns: 1fr;
+  }
+
   .result-import-section {
     margin-top: 18px;
     padding: 12px;
@@ -1622,6 +1700,10 @@ body {
   font-size: 22px;
 }
 
+.app-header-title-row {
+  max-width: 1280px;
+}
+
 .app-header p {
   max-width: 1280px;
   color: #d8dee8;
@@ -1645,6 +1727,7 @@ body {
 .analysis-panel,
 .result-import-section,
 .csv-section,
+.mcy-export-section,
 .backup-section,
 .horse-choice-group,
 .generated-preview,
@@ -1930,6 +2013,7 @@ textarea:focus {
 .analysis-section,
 .result-import-section,
 .csv-section,
+.mcy-export-section,
 .backup-section,
 .ticket-summary-section {
   margin: 10px 0 0;
@@ -2573,6 +2657,8 @@ textarea:focus {
   }
 
   .csv-section .export-button,
+  .mcy-export-section .export-button,
+  .mcy-export-section .secondary-button,
   .backup-section .backup-button,
   .result-import-buttons button,
   .restore-controls button {

@@ -3,8 +3,8 @@ const SIMULATION_STORAGE_KEY = "keibaBetMemoSimulationSettings";
 const MOBILE_INPUT_STORAGE_KEY = "bakenoni_mobile_input_settings_v13";
 const IMPORT_HISTORY_STORAGE_KEY = "keibaBetMemoResultImportHistory";
 const LAST_IMPORT_SNAPSHOT_STORAGE_KEY = "bakenoni_last_import_snapshot";
-const APP_NAME = "keiba-bet-memo";
-const APP_VERSION = "v13";
+const APP_NAME = "BAKENONI";
+const APP_VERSION = "v1.0 暫定完成版";
 const DEFAULT_INITIAL_FUND = 100000;
 const RACE_OPTIONS = ["1R", "2R", "3R", "4R", "5R", "6R", "7R", "8R", "9R", "10R", "11R", "12R"];
 const TICKET_TYPES = ["単勝", "複勝", "ワイド", "馬連", "馬単", "三連複", "三連単"];
@@ -110,6 +110,8 @@ const filterPurchaseModeInput = document.getElementById("filter-purchase-mode");
 const searchKeywordInput = document.getElementById("search-keyword");
 const resetFiltersButton = document.getElementById("reset-filters");
 const exportCsvButton = document.getElementById("export-csv");
+const exportMcyCsvButton = document.getElementById("export-mcy-csv");
+const exportMcyJsonButton = document.getElementById("export-mcy-json");
 const csvMessage = document.getElementById("csv-message");
 const resultImportFileInput = document.getElementById("result-import-file");
 const readResultImportButton = document.getElementById("read-result-import");
@@ -285,6 +287,8 @@ resetFiltersButton.addEventListener("click", function () {
 });
 
 exportCsvButton.addEventListener("click", exportVisibleBetsToCsv);
+exportMcyCsvButton.addEventListener("click", exportMcySummaryToCsv);
+exportMcyJsonButton.addEventListener("click", exportMcySummaryToJson);
 readResultImportButton.addEventListener("click", readResultImportFile);
 applyResultImportButton.addEventListener("click", applyResultImport);
 markRaceMissButton.addEventListener("click", markPendingBetsAsMissForImportedRaces);
@@ -1996,6 +2000,46 @@ function exportVisibleBetsToCsv() {
   showCsvMessage(targetBets.length + "件のCSVを出力しました。", false);
 }
 
+function exportMcySummaryToCsv() {
+  const targetBets = getFilteredBets();
+
+  if (targetBets.length === 0) {
+    showCsvMessage("MCY連携CSV出力できる購入記録がありません。絞り込み条件を変更してください。", true);
+    return;
+  }
+
+  const summaries = createMcyRaceSummaries(targetBets);
+  const csvText = createMcySummaryCsvText(summaries);
+  const fileName = "mcy-bakenoni-summary-" + getTodayText() + ".csv";
+
+  downloadCsv(csvText, fileName);
+  showCsvMessage(summaries.length + "レース分のMCY連携CSVを出力しました。", false);
+}
+
+function exportMcySummaryToJson() {
+  const targetBets = getFilteredBets();
+
+  if (targetBets.length === 0) {
+    showCsvMessage("MCY連携JSON出力できる購入記録がありません。絞り込み条件を変更してください。", true);
+    return;
+  }
+
+  const summaries = createMcyRaceSummaries(targetBets);
+  const jsonText = JSON.stringify({
+    appName: APP_NAME,
+    version: APP_VERSION,
+    exportedAt: new Date().toISOString(),
+    source: "BAKENONI",
+    unit: "race-summary",
+    filter: "current-visible-data",
+    data: summaries
+  }, null, 2);
+  const fileName = "mcy-bakenoni-summary-" + getTodayText() + ".json";
+
+  downloadTextFile(jsonText, fileName, "application/json;charset=utf-8;");
+  showCsvMessage(summaries.length + "レース分のMCY連携JSONを出力しました。", false);
+}
+
 function exportBackupJson() {
   const backupData = {
     appName: APP_NAME,
@@ -2200,6 +2244,127 @@ function createCsvText(targetBets) {
   });
 
   // Excelで日本語が文字化けしにくいように、UTF-8 BOMを先頭に付けます。
+  return "\uFEFF" + csvRows.join("\r\n");
+}
+
+function createMcyRaceSummaries(targetBets) {
+  const summaryMap = new Map();
+
+  targetBets.forEach(function (bet) {
+    const normalizedBet = normalizeBet(bet);
+    const raceId = normalizedBet.raceId || createRaceId(normalizedBet.date, normalizedBet.place, normalizedBet.race);
+    const summaryKey = raceId || [
+      normalizedBet.date,
+      normalizedBet.place,
+      normalizedBet.race
+    ].join("|");
+
+    if (!summaryMap.has(summaryKey)) {
+      summaryMap.set(summaryKey, {
+        date: normalizedBet.date,
+        category: "競馬",
+        source: "BAKENONI",
+        track: normalizedBet.place,
+        race: normalizedBet.race,
+        raceId: raceId,
+        totalPurchase: 0,
+        totalPayout: 0,
+        profit: 0,
+        memo: "",
+        ticketCounts: {},
+        tags: new Set()
+      });
+    }
+
+    const summary = summaryMap.get(summaryKey);
+    const amount = Number(normalizedBet.amount) || 0;
+    const payout = Number(normalizedBet.payout) || 0;
+    const ticketType = normalizedBet.ticketType || "券種未設定";
+
+    summary.totalPurchase += amount;
+    summary.totalPayout += payout;
+    summary.ticketCounts[ticketType] = (summary.ticketCounts[ticketType] || 0) + 1;
+    normalizedBet.tags.forEach(function (tag) {
+      summary.tags.add(tag);
+    });
+  });
+
+  return Array.from(summaryMap.values())
+    .map(function (summary) {
+      summary.profit = summary.totalPayout - summary.totalPurchase;
+      summary.memo = createMcySummaryMemo(summary);
+      delete summary.ticketCounts;
+      delete summary.tags;
+      return summary;
+    })
+    .sort(function (a, b) {
+      return [
+        a.date,
+        a.track,
+        normalizeRaceNumber(a.race),
+        a.raceId
+      ].join("|").localeCompare([
+        b.date,
+        b.track,
+        normalizeRaceNumber(b.race),
+        b.raceId
+      ].join("|"), "ja", { numeric: true });
+    });
+}
+
+function createMcySummaryMemo(summary) {
+  const ticketParts = TICKET_TYPES.map(function (ticketType) {
+    const count = summary.ticketCounts[ticketType] || 0;
+    return count > 0 ? ticketType + count + "点" : "";
+  }).filter(function (part) {
+    return part !== "";
+  });
+  const extraTicketTypes = Object.keys(summary.ticketCounts).filter(function (ticketType) {
+    return !TICKET_TYPES.includes(ticketType);
+  }).sort().map(function (ticketType) {
+    return ticketType + summary.ticketCounts[ticketType] + "点";
+  });
+  const tags = Array.from(summary.tags).sort();
+  const memoParts = ticketParts.concat(extraTicketTypes);
+
+  if (tags.length > 0) {
+    memoParts.push("タグ:" + tags.join(","));
+  }
+
+  return memoParts.join("/");
+}
+
+function createMcySummaryCsvText(summaries) {
+  const header = [
+    "date",
+    "category",
+    "source",
+    "track",
+    "race",
+    "raceId",
+    "totalPurchase",
+    "totalPayout",
+    "profit",
+    "memo"
+  ];
+  const rows = summaries.map(function (summary) {
+    return [
+      summary.date,
+      summary.category,
+      summary.source,
+      summary.track,
+      summary.race,
+      summary.raceId,
+      summary.totalPurchase,
+      summary.totalPayout,
+      summary.profit,
+      summary.memo
+    ];
+  });
+  const csvRows = [header].concat(rows).map(function (row) {
+    return row.map(escapeCsvValue).join(",");
+  });
+
   return "\uFEFF" + csvRows.join("\r\n");
 }
 
@@ -2904,7 +3069,7 @@ function getImportHistoryActionLabel(action) {
     return "取り消し済み";
   }
 
-  return "結果取込";
+  return "結果データ取り込み";
 }
 
 function saveLastImportSnapshot(options) {
@@ -2979,7 +3144,7 @@ function undoLastResultImport() {
     return;
   }
 
-  if (!window.confirm("直前の結果取込前の状態に戻します。購入記録、初期資金、取り込み履歴を復元しますか？")) {
+  if (!window.confirm("直前の結果データ取り込み前の状態に戻します。購入記録、初期資金、取り込み履歴を復元しますか？")) {
     return;
   }
 
@@ -3013,7 +3178,7 @@ function undoLastResultImport() {
   currentResultImportPreview = null;
   renderBets();
   renderResultImportPreview(null);
-  showResultImportMessage("直前の結果取込を取り消しました。", false);
+  showResultImportMessage("直前の結果データ取り込みを取り消しました。", false);
 }
 
 function showResultImportMessage(message, isError) {

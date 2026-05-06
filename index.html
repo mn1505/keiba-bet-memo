@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#172033">
-  <meta name="description" content="競馬の購入記録をスマホに保存できるメモアプリです。">
-  <title>購入記録</title>
+  <meta name="description" content="BAKENONIは、競馬の購入記録、架空資金シミュレーション、結果照合をローカルに保存できるシステムです。">
+  <title>BAKENONI</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon.svg">
@@ -14,8 +14,12 @@
 <body>
   <header class="app-header">
     <div>
-      <h1>購入記録</h1>
-      <p>購入予定・購入済みの内容をローカルに記録できます。</p>
+      <div class="app-header-title-row">
+        <h1>BAKENONI</h1>
+        <span class="version-badge">v1.0 暫定完成版</span>
+      </div>
+      <p>馬券購入記録・架空資金シミュレーション・結果照合システム</p>
+      <p class="app-subtitle">MCY連携準備版</p>
     </div>
   </header>
 
@@ -505,6 +509,7 @@
           <div>
             <h2 id="result-import-title">結果データ取り込み</h2>
             <p>results.json または CSV を手動で読み込み、登録済みの購入記録と照合します。</p>
+            <p class="system-note">反映前に差分プレビューを確認してください。直前の結果データ取り込みは取り消しできますが、重要データはJSONバックアップを推奨します。</p>
           </div>
         </div>
 
@@ -517,7 +522,7 @@
             <button type="button" id="read-result-import" class="secondary-button">プレビューを作成</button>
             <button type="button" id="apply-result-import" class="primary-button" disabled>結果を反映</button>
             <button type="button" id="mark-race-miss" class="secondary-button" disabled>対象レースの未確定を不的中にする</button>
-            <button type="button" id="undo-result-import" class="secondary-button" disabled>直前の結果取込を取り消す</button>
+            <button type="button" id="undo-result-import" class="secondary-button" disabled>直前の結果データ取り込みを取り消す</button>
           </div>
         </div>
 
@@ -546,8 +551,20 @@
         <button type="button" id="export-csv" class="export-button">表示中のデータをCSV出力</button>
       </section>
 
+      <section class="mcy-export-section" aria-labelledby="mcy-export-title">
+        <div>
+          <h2 id="mcy-export-title">MCY連携出力</h2>
+          <p class="system-note">現在の絞り込み条件で表示中の購入記録を、レース単位の収支サマリとして出力します。</p>
+        </div>
+        <div class="mcy-export-buttons">
+          <button type="button" id="export-mcy-csv" class="export-button">MCY連携CSV出力</button>
+          <button type="button" id="export-mcy-json" class="secondary-button">MCY連携JSON出力</button>
+        </div>
+      </section>
+
       <section class="backup-section" aria-labelledby="backup-title">
-        <h2 id="backup-title">バックアップ/復元</h2>
+        <h2 id="backup-title">JSONバックアップ/復元</h2>
+        <p class="system-note">大きな変更前や結果データ取り込み前は、JSONバックアップを推奨します。復元は現在データを置き換える可能性があります。</p>
         <div class="backup-grid">
           <button type="button" id="export-backup" class="backup-button">全データをJSONバックアップ</button>
 
@@ -572,6 +589,11 @@
       </section>
     </section>
   </main>
+
+  <footer class="app-footer">
+    <p>BAKENONI v1.0 暫定完成版 / MCY連携準備版</p>
+    <p>今後の再開ポイント：MCY正式連携、クラウド保存、一括操作強化、月別/年別分析、競馬場・券種・買い方のクロス分析強化。</p>
+  </footer>
 
   <script src="script.js"></script>
   <script>

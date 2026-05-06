@@ -1,4 +1,4 @@
-const CACHE_NAME = "keiba-purchase-record-v12-9-result-import-safety";
+const CACHE_NAME = "bakenoni-v1-0-provisional";
 
 const CACHE_FILES = [
   "./",

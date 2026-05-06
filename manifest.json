@@ -1,7 +1,7 @@
 {
-  "name": "購入記録",
-  "short_name": "購入記録",
-  "description": "競馬の購入記録をスマホに保存できるメモアプリです。",
+  "name": "BAKENONI",
+  "short_name": "BAKENONI",
+  "description": "馬券購入記録・架空資金シミュレーション・結果照合システムです。",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
